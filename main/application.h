@@ -82,6 +82,17 @@ public:
      */
     void Schedule(std::function<void()>&& callback);
 
+#ifdef CONFIG_ENABLE_LOCAL_MUSIC
+    // Phát nhạc cục bộ (xem music/music_player.h). Các hàm này chỉ gọi trên luồng chính (Schedule).
+    enum class KetThucNhac { kHoanThanh, kLoi, kBiNgat };
+    using NhacKetThucCallback = std::function<void(KetThucNhac)>;
+    using NhacTienDoCallback = std::function<void(uint32_t media_position_ms)>;
+    bool CoTheBatDauNhac();
+    bool BatDauPhatNhac(std::string url, NhacKetThucCallback ket_thuc, NhacTienDoCallback tien_do);
+    void DungPhatNhac();
+    bool DangPhatNhac();
+#endif
+
     /**
      * Alert with status, message, emotion and optional sound
      */
@@ -141,6 +152,11 @@ private:
     std::string last_error_message_;
     AudioService audio_service_;
     NotifyPlayer notify_player_;
+#ifdef CONFIG_ENABLE_LOCAL_MUSIC
+    std::mutex nhac_mutex_;
+    NhacKetThucCallback nhac_ket_thuc_;
+    NhacTienDoCallback nhac_tien_do_;
+#endif
     uint32_t notification_playback_id_ = 0;
     std::unique_ptr<Ota> ota_;
 

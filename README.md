@@ -126,6 +126,10 @@ The firmware connects to the official [xiaozhi.me](https://xiaozhi.me) server by
 - [MQTT + UDP Hybrid Communication Protocol Document](docs/mqtt-udp.md)
 - [A detailed WebSocket communication protocol document](docs/websocket.md)
 
+## Nhạc cục bộ (Local Music)
+
+Phát nhạc từ máy chủ nhạc trong mạng LAN và điều khiển bằng giọng nói qua MCP (`CONFIG_ENABLE_LOCAL_MUSIC`, mặc định tắt). Xem [docs/local-music.md](docs/local-music.md) và [tools/music-server](tools/music-server/README.md).
+
 ## Large Model Configuration
 
 If you already have a XiaoZhi AI chatbot device and have connected to the official server, you can log in to the [xiaozhi.me](https://xiaozhi.me) console for configuration.

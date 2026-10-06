@@ -1,0 +1,8 @@
+fastapi>=0.110,<1.0
+uvicorn>=0.29,<1.0
+mutagen>=1.47,<2.0
+watchdog>=4.0,<7.0
+zeroconf>=0.132,<1.0
+# Chỉ cần khi chạy kiểm thử
+pytest>=8.0,<9.0
+httpx>=0.27,<1.0

@@ -1,0 +1,17 @@
+services:
+  xiaozhi-music:
+    build: .
+    container_name: xiaozhi-music
+    # Cần network_mode host để quảng bá mDNS (xiaozhi-music.local) trên mạng LAN.
+    # Nếu dùng mạng bridge, hãy bỏ dòng này, mở cổng 8765 và đặt ADVERTISE_IP.
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      MUSIC_DIR: /music
+      DATA_DIR: /data
+      PORT: "8765"
+      API_KEY: "${API_KEY:-}"
+      ENABLE_MDNS: "true"
+    volumes:
+      - ${MUSIC_HOST_DIR:-./music}:/music:ro
+      - ./du_lieu:/data

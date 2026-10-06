@@ -123,6 +123,29 @@ These tools are hidden by default. The backend must pass `withUserTools=true` to
 | `self.screen.preview_image` | Download and display an image from `url` on the screen. |
 | `self.assets.set_download_url` | Set the download URL for the assets partition. |
 
+### Local music tools - from `DangKyCongCuNhac` (`CONFIG_ENABLE_LOCAL_MUSIC=y`)
+
+Công cụ điều khiển nhạc từ máy chủ nhạc cục bộ trong LAN (xem [`local-music.md`](./local-music.md)). Âm lượng dùng lại `self.audio_speaker.set_volume`.
+
+| Tool | Tham số | Mô tả |
+|------|---------|-------|
+| `self.music.search` | `query`, `limit` (1-20, mặc định 5) | Tìm bài theo tên/nghệ sĩ/album, trả về id, tên, nghệ sĩ. |
+| `self.music.play` | `query` hoặc `id` | Tìm và phát; kết quả còn lại vào hàng đợi. |
+| `self.music.play_artist` | `artist` | Phát các bài của nghệ sĩ. |
+| `self.music.play_album` | `album` | Phát album. |
+| `self.music.play_playlist` | `name` | Phát danh sách phát. |
+| `self.music.list_playlists` | - | Liệt kê danh sách phát. |
+| `self.music.pause` / `resume` / `stop` | - | Tạm dừng / tiếp tục / dừng. |
+| `self.music.next` / `previous` | - | Bài tiếp theo / bài trước. |
+| `self.music.seek` | `seconds` | Tua đến vị trí (giây). |
+| `self.music.set_repeat` | `mode`: `none`/`one`/`all` | Chế độ lặp. |
+| `self.music.set_shuffle` | `enabled` | Phát ngẫu nhiên. |
+| `self.music.queue_add` | `query` hoặc `id` | Thêm vào hàng đợi. |
+| `self.music.queue_clear` / `queue_list` | - | Xóa / xem hàng đợi. |
+| `self.music.now_playing` | - | Bài đang phát, vị trí, thời lượng, trạng thái, lặp, ngẫu nhiên. |
+| `self.music.rescan` (user-only) | - | Yêu cầu máy chủ quét lại thư mục nhạc. |
+| `self.music.set_server` (user-only) | `host`, `port`, `api_key` | Cấu hình máy chủ nhạc (host rỗng = tự tìm bằng mDNS). |
+
 ## JSON-RPC Examples
 
 ### 1. Get the tools list

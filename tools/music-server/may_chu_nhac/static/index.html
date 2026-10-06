@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Máy chủ nhạc XiaoZhi</title>
+<style>
+  :root { --nen:#0f1115; --the:#1f2430; --chu:#ecf0f6; --phu:#9aa3b2; --nhan:#3b82f6; --vien:#2f3542; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, "Segoe UI", Roboto, sans-serif; background:var(--nen); color:var(--chu); }
+  header { padding:16px 20px; border-bottom:1px solid var(--vien); display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  h1 { font-size:1.2rem; margin:0; flex:1; }
+  main { max-width:960px; margin:0 auto; padding:16px; display:grid; gap:16px; }
+  input, button, select { font:inherit; border-radius:10px; border:1px solid var(--vien); background:var(--the); color:var(--chu); padding:10px 12px; }
+  button { cursor:pointer; background:var(--nhan); border:0; }
+  button.phu { background:var(--the); border:1px solid var(--vien); }
+  .hang { display:flex; gap:8px; flex-wrap:wrap; }
+  .hang input { flex:1; min-width:160px; }
+  ul { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+  li { background:var(--the); border-radius:12px; padding:10px 14px; display:flex; gap:10px; align-items:center; }
+  li .thongtin { flex:1; min-width:0; }
+  li .ten { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  li .phu { color:var(--phu); font-size:.85rem; }
+  audio { width:100%; }
+  h2 { font-size:1rem; margin:0 0 8px; color:var(--phu); }
+  @media (max-width:520px) { li { flex-wrap:wrap; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎵 Máy chủ nhạc XiaoZhi</h1>
+  <span id="trangthai" class="phu"></span>
+  <button class="phu" id="quet">Quét lại thư viện</button>
+  <button class="phu" id="khoa">Khóa API</button>
+</header>
+<main>
+  <section>
+    <audio id="nghe" controls></audio>
+    <div class="phu" id="dangphat"></div>
+  </section>
+  <section>
+    <div class="hang">
+      <input id="tukhoa" placeholder="Tìm bài hát, nghệ sĩ, album (có dấu hoặc không dấu)">
+      <button id="tim">Tìm</button>
+    </div>
+  </section>
+  <section><h2>Thư viện</h2><ul id="ds"></ul></section>
+  <section>
+    <h2>Danh sách phát</h2>
+    <div class="hang">
+      <input id="tends" placeholder="Tên danh sách phát mới">
+      <button id="luuds">Lưu các bài đã chọn</button>
+    </div>
+    <ul id="dsphat"></ul>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+let khoaApi = localStorage.getItem("khoa_api") || "";
+const daChon = new Set();
+const tieuDe = () => (khoaApi ? { "X-Api-Key": khoaApi } : {});
+
+async function goi(url, tuyChon = {}) {
+  const r = await fetch(url, { ...tuyChon, headers: { ...tieuDe(), ...(tuyChon.headers || {}) } });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.loi || "Lỗi không xác định");
+  return d;
+}
+function dinhDang(giay) { return Math.floor(giay / 60) + ":" + String(giay % 60).padStart(2, "0"); }
+function the(bai) {
+  const li = document.createElement("li");
+  const cb = document.createElement("input");
+  cb.type = "checkbox"; cb.checked = daChon.has(bai.id);
+  cb.onchange = () => (cb.checked ? daChon.add(bai.id) : daChon.delete(bai.id));
+  const tt = document.createElement("div"); tt.className = "thongtin";
+  const ten = document.createElement("div"); ten.className = "ten"; ten.textContent = bai.tieu_de;
+  const phu = document.createElement("div"); phu.className = "phu";
+  phu.textContent = [bai.nghe_si, bai.album, dinhDang(bai.thoi_luong)].filter(Boolean).join(" · ");
+  tt.append(ten, phu);
+  const nut = document.createElement("button"); nut.textContent = "▶ Nghe thử";
+  nut.onclick = () => {
+    $("nghe").src = `/stream/${bai.id}` + (khoaApi ? `?khoa_api=${encodeURIComponent(khoaApi)}` : "");
+    $("nghe").play(); $("dangphat").textContent = "Đang phát: " + bai.tieu_de;
+  };
+  li.append(cb, tt, nut);
+  return li;
+}
+async function taiThuVien() {
+  try {
+    const d = await goi("/api/bai-hat?so_luong=100&tu_khoa=" + encodeURIComponent($("tukhoa").value));
+    $("ds").replaceChildren(...d.bai_hat.map(the));
+    if (!d.bai_hat.length) $("ds").textContent = "Không tìm thấy bài hát nào.";
+    const tt = await goi("/api/trang-thai");
+    $("trangthai").textContent = `${tt.so_bai_hat} bài · ffmpeg: ${tt.co_ffmpeg ? "có" : "không"}`;
+  } catch (e) { $("ds").textContent = e.message; }
+}
+async function taiDanhSachPhat() {
+  try {
+    const d = await goi("/api/danh-sach-phat");
+    $("dsphat").replaceChildren(...d.danh_sach_phat.map((p) => {
+      const li = document.createElement("li");
+      const tt = document.createElement("div"); tt.className = "thongtin"; tt.textContent = `${p.ten} (${p.so_bai} bài)`;
+      const xoa = document.createElement("button"); xoa.className = "phu"; xoa.textContent = "Xóa";
+      xoa.onclick = async () => { await goi("/api/danh-sach-phat/" + encodeURIComponent(p.ten), { method: "DELETE" }); taiDanhSachPhat(); };
+      li.append(tt, xoa); return li;
+    }));
+  } catch (e) { $("dsphat").textContent = e.message; }
+}
+$("tim").onclick = taiThuVien;
+$("tukhoa").onkeydown = (e) => { if (e.key === "Enter") taiThuVien(); };
+$("quet").onclick = async () => { await goi("/api/quet", { method: "POST" }); taiThuVien(); };
+$("khoa").onclick = () => { khoaApi = prompt("Nhập khóa API:", khoaApi) || ""; localStorage.setItem("khoa_api", khoaApi); taiThuVien(); taiDanhSachPhat(); };
+$("luuds").onclick = async () => {
+  const ten = $("tends").value.trim();
+  if (!ten || !daChon.size) { alert("Hãy nhập tên và chọn ít nhất một bài."); return; }
+  try {
+    await goi("/api/danh-sach-phat/" + encodeURIComponent(ten), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bai_hat: [...daChon] }) });
+    taiDanhSachPhat();
+  } catch (e) { alert(e.message); }
+};
+taiThuVien(); taiDanhSachPhat();
+</script>
+</body>
+</html>
