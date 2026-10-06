@@ -514,7 +514,7 @@ void LcdDisplay::InitializeMenuAndAvatar() {
     lv_obj_set_pos(avatar_leg_right_, 32, 78);
     lv_obj_set_style_radius(avatar_leg_right_, 4, 0);
     lv_obj_set_style_bg_color(avatar_leg_right_, lv_color_hex(0x303952), 0);
-    lv_obj_set_style_border_width(0, 0, 0);
+    lv_obj_set_style_border_width(avatar_leg_right_, 0, 0);
     lv_obj_set_style_pad_all(avatar_leg_right_, 0, 0);
 
     lv_obj_add_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
