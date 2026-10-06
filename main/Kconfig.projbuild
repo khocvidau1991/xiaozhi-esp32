@@ -702,6 +702,20 @@ menu "Ethernet Configuration"
 
 endmenu
 
+config LCD_MODERN_UI
+    bool "Giao diện LCD hiện đại"
+    default n
+    help
+        Bật bảng màu hiện đại và bố cục gọn cho màn hình LCD.
+
+config ENABLE_GPIO_WEB_CONFIG
+    bool "Cấu hình GPIO qua web cho Bread Compact Wi-Fi LCD"
+    depends on BOARD_TYPE_BREAD_COMPACT_WIFI_LCD
+    default n
+    help
+        Cho phép thay đổi chân GPIO của bo mạch này bằng trang web nội bộ.
+
+
 choice ESP32_S3_LCD_EV_BOARD_VERSION
     depends on BOARD_TYPE_ESP32_S3_LCD_EV_BOARD
     prompt "EV_BOARD Type"

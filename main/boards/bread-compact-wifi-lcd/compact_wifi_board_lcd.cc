@@ -8,6 +8,13 @@
 #include "mcp_server.h"
 #include "lamp_controller.h"
 #include "led/single_led.h"
+#include "gpio_config.h"
+#ifdef CONFIG_ENABLE_GPIO_WEB_CONFIG
+#include "gpio_web_server.h"
+#include <wifi_manager.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#endif
 
 #include <esp_log.h>
 #include <driver/i2c_master.h>
@@ -61,15 +68,33 @@ static const gc9a01_lcd_init_cmd_t gc9107_lcd_init_cmds[] = {
 
 class CompactWifiBoardLCD : public WifiBoard {
 private:
- 
+    CauHinhGpio cau_hinh_gpio_;
     Button boot_button_;
     LcdDisplay* display_;
+#ifdef CONFIG_ENABLE_GPIO_WEB_CONFIG
+    MayChuWebCauHinhGpio may_chu_gpio_;
+
+    static void TheoDoiMang(void* arg) {
+        auto* board = static_cast<CompactWifiBoardLCD*>(arg);
+        while (true) {
+            auto& wifi = WifiManager::GetInstance();
+            if (wifi.IsConfigMode()) {
+                board->may_chu_gpio_.BatDau(8080);
+            } else if (wifi.IsConnected()) {
+                board->may_chu_gpio_.BatDau(80);
+            } else {
+                board->may_chu_gpio_.Dung();
+            }
+            vTaskDelay(pdMS_TO_TICKS(1000));
+        }
+    }
+#endif
 
     void InitializeSpi() {
         spi_bus_config_t buscfg = {};
-        buscfg.mosi_io_num = DISPLAY_MOSI_PIN;
+        buscfg.mosi_io_num = cau_hinh_gpio_.man_hinh_mosi;
         buscfg.miso_io_num = GPIO_NUM_NC;
-        buscfg.sclk_io_num = DISPLAY_CLK_PIN;
+        buscfg.sclk_io_num = cau_hinh_gpio_.man_hinh_clk;
         buscfg.quadwp_io_num = GPIO_NUM_NC;
         buscfg.quadhd_io_num = GPIO_NUM_NC;
         buscfg.max_transfer_sz = DISPLAY_WIDTH * DISPLAY_HEIGHT * sizeof(uint16_t);
@@ -79,11 +104,11 @@ private:
     void InitializeLcdDisplay() {
         esp_lcd_panel_io_handle_t panel_io = nullptr;
         esp_lcd_panel_handle_t panel = nullptr;
-        // 液晶屏控制IO初始化
+        // Khởi tạo các chân điều khiển màn hình LCD
         ESP_LOGD(TAG, "Install panel IO");
         esp_lcd_panel_io_spi_config_t io_config = {};
-        io_config.cs_gpio_num = DISPLAY_CS_PIN;
-        io_config.dc_gpio_num = DISPLAY_DC_PIN;
+        io_config.cs_gpio_num = cau_hinh_gpio_.man_hinh_cs;
+        io_config.dc_gpio_num = cau_hinh_gpio_.man_hinh_dc;
         io_config.spi_mode = DISPLAY_SPI_MODE;
         io_config.pclk_hz = 40 * 1000 * 1000;
         io_config.trans_queue_depth = 10;
@@ -91,20 +116,23 @@ private:
         io_config.lcd_param_bits = 8;
         ESP_ERROR_CHECK(esp_lcd_new_panel_io_spi(SPI3_HOST, &io_config, &panel_io));
 
-        // 初始化液晶屏驱动芯片
+        // Khởi tạo bộ điều khiển màn hình LCD
         ESP_LOGD(TAG, "Install LCD driver");
         esp_lcd_panel_dev_config_t panel_config = {};
-        panel_config.reset_gpio_num = DISPLAY_RST_PIN;
+        panel_config.reset_gpio_num = cau_hinh_gpio_.man_hinh_rst;
         panel_config.rgb_ele_order = DISPLAY_RGB_ORDER;
         panel_config.bits_per_pixel = 16;
+#if defined(LCD_TYPE_GC9A01_SERIAL)
+        gc9a01_vendor_config_t gc9107_vendor_config = {
+            .init_cmds = gc9107_lcd_init_cmds,
+            .init_cmds_size = sizeof(gc9107_lcd_init_cmds) / sizeof(gc9a01_lcd_init_cmd_t),
+        };
+        panel_config.vendor_config = &gc9107_vendor_config;
+#endif
 #if defined(LCD_TYPE_ILI9341_SERIAL)
         ESP_ERROR_CHECK(esp_lcd_new_panel_ili9341(panel_io, &panel_config, &panel));
 #elif defined(LCD_TYPE_GC9A01_SERIAL)
         ESP_ERROR_CHECK(esp_lcd_new_panel_gc9a01(panel_io, &panel_config, &panel));
-        gc9a01_vendor_config_t gc9107_vendor_config = {
-            .init_cmds = gc9107_lcd_init_cmds,
-            .init_cmds_size = sizeof(gc9107_lcd_init_cmds) / sizeof(gc9a01_lcd_init_cmd_t),
-        };        
 #else
         ESP_ERROR_CHECK(esp_lcd_new_panel_st7789(panel_io, &panel_config, &panel));
 #endif
@@ -115,9 +143,6 @@ private:
         esp_lcd_panel_invert_color(panel, DISPLAY_INVERT_COLOR);
         esp_lcd_panel_swap_xy(panel, DISPLAY_SWAP_XY);
         esp_lcd_panel_mirror(panel, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y);
-#ifdef  LCD_TYPE_GC9A01_SERIAL
-        panel_config.vendor_config = &gc9107_vendor_config;
-#endif
         display_ = new SpiLcdDisplay(panel_io, panel,
                                     DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
     }
@@ -133,36 +158,48 @@ private:
         });
     }
 
-    // 物联网初始化，添加对 AI 可见设备
+    // Khởi tạo thiết bị điều khiển đèn để AI có thể sử dụng
     void InitializeTools() {
-        static LampController lamp(LAMP_GPIO);
+        if (cau_hinh_gpio_.den_lamp != GPIO_NUM_NC) {
+            static LampController lamp(cau_hinh_gpio_.den_lamp);
+        }
     }
 
 public:
     CompactWifiBoardLCD() :
-        boot_button_(BOOT_BUTTON_GPIO) {
+        cau_hinh_gpio_(CauHinhGpio::Tai()),
+        boot_button_(cau_hinh_gpio_.nut_khoi_dong)
+#ifdef CONFIG_ENABLE_GPIO_WEB_CONFIG
+        , may_chu_gpio_(cau_hinh_gpio_)
+#endif
+    {
         InitializeSpi();
         InitializeLcdDisplay();
         InitializeButtons();
         InitializeTools();
-        if (DISPLAY_BACKLIGHT_PIN != GPIO_NUM_NC) {
+        if (cau_hinh_gpio_.den_nen != GPIO_NUM_NC) {
             GetBacklight()->RestoreBrightness();
         }
-        
+#ifdef CONFIG_ENABLE_GPIO_WEB_CONFIG
+        xTaskCreate(TheoDoiMang, "gpio_web", 3072, this, 2, nullptr);
+#endif
     }
 
     virtual Led* GetLed() override {
-        static SingleLed led(BUILTIN_LED_GPIO);
+        if (cau_hinh_gpio_.den_led == GPIO_NUM_NC) {
+            return nullptr;
+        }
+        static SingleLed led(cau_hinh_gpio_.den_led);
         return &led;
     }
 
     virtual AudioCodec* GetAudioCodec() override {
 #ifdef AUDIO_I2S_METHOD_SIMPLEX
         static NoAudioCodecSimplex audio_codec(AUDIO_INPUT_SAMPLE_RATE, AUDIO_OUTPUT_SAMPLE_RATE,
-            AUDIO_I2S_SPK_GPIO_BCLK, AUDIO_I2S_SPK_GPIO_LRCK, AUDIO_I2S_SPK_GPIO_DOUT, AUDIO_I2S_MIC_GPIO_SCK, AUDIO_I2S_MIC_GPIO_WS, AUDIO_I2S_MIC_GPIO_DIN);
+            cau_hinh_gpio_.loa_bclk, cau_hinh_gpio_.loa_lrck, cau_hinh_gpio_.loa_dout, cau_hinh_gpio_.mic_sck, cau_hinh_gpio_.mic_ws, cau_hinh_gpio_.mic_din);
 #else
         static NoAudioCodecDuplex audio_codec(AUDIO_INPUT_SAMPLE_RATE, AUDIO_OUTPUT_SAMPLE_RATE,
-            AUDIO_I2S_GPIO_BCLK, AUDIO_I2S_GPIO_WS, AUDIO_I2S_GPIO_DOUT, AUDIO_I2S_GPIO_DIN);
+            cau_hinh_gpio_.i2s_bclk, cau_hinh_gpio_.i2s_ws, cau_hinh_gpio_.i2s_dout, cau_hinh_gpio_.i2s_din);
 #endif
         return &audio_codec;
     }
@@ -172,8 +209,8 @@ public:
     }
 
     virtual Backlight* GetBacklight() override {
-        if (DISPLAY_BACKLIGHT_PIN != GPIO_NUM_NC) {
-            static PwmBacklight backlight(DISPLAY_BACKLIGHT_PIN, DISPLAY_BACKLIGHT_OUTPUT_INVERT);
+        if (cau_hinh_gpio_.den_nen != GPIO_NUM_NC) {
+            static PwmBacklight backlight(cau_hinh_gpio_.den_nen, DISPLAY_BACKLIGHT_OUTPUT_INVERT);
             return &backlight;
         }
         return nullptr;
