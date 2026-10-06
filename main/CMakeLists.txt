@@ -1077,7 +1077,17 @@ if(CONFIG_IDF_TARGET_ESP32S3)
     list(APPEND SOURCES "boards/common/esp32_camera.cc")
 endif()
 
+if(CONFIG_ENABLE_LOCAL_MUSIC)
+    list(APPEND SOURCES
+        "music/music_client.cc"
+        "music/music_player.cc"
+        "music/music_mcp_tools.cc")
+endif()
+
 set(MAIN_PRIV_REQUIRES_EXTRA "")
+if(CONFIG_ENABLE_LOCAL_MUSIC)
+    list(APPEND MAIN_PRIV_REQUIRES_EXTRA espressif__mdns)
+endif()
 if(CONFIG_XIAOZHI_NETWORK_ETHERNET AND CONFIG_XIAOZHI_ETH_PHY_IP101)
     list(APPEND MAIN_PRIV_REQUIRES_EXTRA espressif__ip101)
 endif()

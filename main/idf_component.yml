@@ -42,6 +42,7 @@ dependencies:
   espressif/esp_codec_dev: ~1.6.2
   espressif/esp-sr: ==2.4.7
   espressif/button: ~4.2.1
+  espressif/mdns: ^1.8.0
   espressif/knob: ^1.1.0
   esphome/esp-hub75:
     version: ^0.3.6

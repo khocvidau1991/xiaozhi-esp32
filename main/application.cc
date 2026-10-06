@@ -6,6 +6,9 @@
 #include "cjson_utils.h"
 #include "display.h"
 #include "mcp_server.h"
+#ifdef CONFIG_ENABLE_LOCAL_MUSIC
+#include "music/music_mcp_tools.h"
+#endif
 #include "mqtt_protocol.h"
 #include "settings.h"
 #include "system_info.h"
@@ -90,6 +93,16 @@ void Application::Initialize() {
     };
     callbacks.on_playback_progress = [this](uint32_t playback_id, uint32_t media_position_ms) {
         notify_player_.OnPlaybackProgress(playback_id, media_position_ms);
+#ifdef CONFIG_ENABLE_LOCAL_MUSIC
+        NhacTienDoCallback tien_do;
+        {
+            std::lock_guard<std::mutex> lock(nhac_mutex_);
+            tien_do = nhac_tien_do_;
+        }
+        if (tien_do && playback_id == notification_playback_id_) {
+            tien_do(media_position_ms);
+        }
+#endif
     };
     audio_service_.SetCallbacks(callbacks);
 
@@ -105,6 +118,9 @@ void Application::Initialize() {
     auto& mcp_server = McpServer::GetInstance();
     mcp_server.AddCommonTools();
     mcp_server.AddUserOnlyTools();
+#ifdef CONFIG_ENABLE_LOCAL_MUSIC
+    DangKyCongCuNhac();
+#endif
 
     // Set network event callback for UI updates and network state handling
     board.SetNetworkEventCallback([this](NetworkEvent event, const std::string& data) {
@@ -1145,6 +1161,15 @@ void Application::StartNotification(std::string audio_url, std::vector<NotifySub
 }
 
 void Application::StopNotification() {
+#ifdef CONFIG_ENABLE_LOCAL_MUSIC
+    NhacKetThucCallback nhac_ket_thuc;
+    {
+        std::lock_guard<std::mutex> lock(nhac_mutex_);
+        nhac_ket_thuc = std::move(nhac_ket_thuc_);
+        nhac_ket_thuc_ = nullptr;
+        nhac_tien_do_ = nullptr;
+    }
+#endif
     notify_player_.Stop();
     audio_service_.ResetDecoder();
     auto& board = Board::GetInstance();
@@ -1153,6 +1178,11 @@ void Application::StopNotification() {
     if (GetDeviceState() == kDeviceStateNotifying) {
         SetDeviceState(kDeviceStateIdle);
     }
+#ifdef CONFIG_ENABLE_LOCAL_MUSIC
+    if (nhac_ket_thuc) {
+        nhac_ket_thuc(KetThucNhac::kBiNgat);
+    }
+#endif
 }
 
 void Application::HandleNotificationFinished(uint32_t playback_id, bool success) {
@@ -1161,8 +1191,86 @@ void Application::HandleNotificationFinished(uint32_t playback_id, bool success)
     }
     ESP_LOGI(TAG, "Notification playback %lu %s", static_cast<unsigned long>(playback_id),
              success ? "completed" : "failed");
+#ifdef CONFIG_ENABLE_LOCAL_MUSIC
+    NhacKetThucCallback nhac_ket_thuc;
+    {
+        std::lock_guard<std::mutex> lock(nhac_mutex_);
+        nhac_ket_thuc = std::move(nhac_ket_thuc_);
+        nhac_ket_thuc_ = nullptr;
+    }
     StopNotification();
+    if (nhac_ket_thuc) {
+        nhac_ket_thuc(success ? KetThucNhac::kHoanThanh : KetThucNhac::kLoi);
+    }
+#else
+    StopNotification();
+#endif
 }
+
+#ifdef CONFIG_ENABLE_LOCAL_MUSIC
+bool Application::CoTheBatDauNhac() {
+    return GetDeviceState() == kDeviceStateIdle && !notify_player_.IsBusy();
+}
+
+bool Application::DangPhatNhac() {
+    std::lock_guard<std::mutex> lock(nhac_mutex_);
+    return nhac_ket_thuc_ != nullptr;
+}
+
+void Application::DungPhatNhac() {
+    if (GetDeviceState() == kDeviceStateNotifying && DangPhatNhac()) {
+        StopNotification();
+    }
+}
+
+bool Application::BatDauPhatNhac(std::string url, NhacKetThucCallback ket_thuc,
+                                 NhacTienDoCallback tien_do) {
+    if (!CoTheBatDauNhac()) {
+        return false;
+    }
+
+    auto& board = Board::GetInstance();
+    board.SetPowerSaveLevel(PowerSaveLevel::PERFORMANCE);
+    audio_service_.EnableVoiceProcessing(false);
+    // Giữ phát hiện từ khóa đánh thức để người dùng có thể ngắt nhạc
+    audio_service_.EnableWakeWordDetection(audio_service_.IsAfeWakeWord());
+    audio_service_.ReleaseWakeWordResources();
+    while (audio_service_.PopPacketFromSendQueue()) {
+    }
+
+    if (!SetDeviceState(kDeviceStateNotifying)) {
+        board.SetPowerSaveLevel(PowerSaveLevel::LOW_POWER);
+        return false;
+    }
+
+    audio_service_.ResetDecoder();
+    uint32_t playback_id = ++notification_playback_id_;
+    if (playback_id == 0) {
+        playback_id = ++notification_playback_id_;
+    }
+    {
+        std::lock_guard<std::mutex> lock(nhac_mutex_);
+        nhac_ket_thuc_ = std::move(ket_thuc);
+        nhac_tien_do_ = std::move(tien_do);
+    }
+
+    bool started = notify_player_.Start(
+        std::move(url), {}, playback_id, nullptr,
+        [this](uint32_t id, bool success) {
+            Schedule([this, id, success]() { HandleNotificationFinished(id, success); });
+        });
+    if (!started) {
+        {
+            std::lock_guard<std::mutex> lock(nhac_mutex_);
+            nhac_ket_thuc_ = nullptr;
+            nhac_tien_do_ = nullptr;
+        }
+        StopNotification();
+        return false;
+    }
+    return true;
+}
+#endif
 
 void Application::Schedule(std::function<void()>&& callback) {
     {

@@ -1152,4 +1152,46 @@ menu "TAIJIPAI_S3_CONFIG"
         启动双声道
 endmenu
 
+menu "Nhạc cục bộ (Local Music)"
+
+config ENABLE_LOCAL_MUSIC
+    bool "Bật phát nhạc từ máy chủ nhạc cục bộ trong mạng LAN"
+    default n
+    help
+        Bật module phát nhạc qua mạng LAN và bộ công cụ MCP self.music.*.
+        Máy chủ nhạc nằm trong tools/music-server. Khi tắt, không có mã nào được biên dịch thêm.
+
+config MUSIC_SERVER_DEFAULT_HOST
+    string "Địa chỉ máy chủ nhạc mặc định"
+    default ""
+    depends on ENABLE_LOCAL_MUSIC
+    help
+        Để trống để thiết bị tự tìm máy chủ bằng mDNS (_xiaozhi-music._tcp).
+        Có thể ghi đè trong lúc chạy bằng công cụ MCP self.music.set_server.
+
+config MUSIC_SERVER_DEFAULT_PORT
+    int "Cổng máy chủ nhạc mặc định"
+    default 8765
+    range 1 65535
+    depends on ENABLE_LOCAL_MUSIC
+
+config MUSIC_PLAYER_BUFFER_KB
+    int "Bộ đệm phản hồi JSON của máy chủ nhạc (KB)"
+    default 32
+    range 8 256
+    depends on ENABLE_LOCAL_MUSIC
+    help
+        Dung lượng tối đa của một phản hồi JSON từ máy chủ nhạc (tìm kiếm, danh sách phát).
+        Board không có PSRAM nên giữ giá trị nhỏ.
+
+config MUSIC_PREFER_TRANSCODE
+    bool "Ưu tiên luồng nhẹ (Ogg/Opus 16 kHz, 32 kbps)"
+    default y
+    depends on ENABLE_LOCAL_MUSIC
+    help
+        Thiết bị luôn yêu cầu máy chủ chuyển mã sang Ogg/Opus đơn kênh bằng ffmpeg.
+        Bật: 16 kHz, 32 kbps (nhẹ, phù hợp board yếu). Tắt: 24 kHz, 48 kbps (chất lượng cao hơn).
+
+endmenu
+
 endmenu
