@@ -5,7 +5,7 @@
 
 static const char* TAG = "StateMachine";
 
-// State name strings for logging
+// Chuỗi tên trạng thái dùng để ghi log
 static const char* const STATE_STRINGS[] = {
     "unknown",
     "starting",
@@ -33,44 +33,44 @@ const char* DeviceStateMachine::GetStateName(DeviceState state) {
 }
 
 bool DeviceStateMachine::IsValidTransition(DeviceState from, DeviceState to) const {
-    // Allow transition to the same state (no-op)
+    // Cho phép chuyển sang cùng trạng thái (không làm gì)
     if (from == to) {
         return true;
     }
 
-    // Define valid state transitions based on the state diagram
+    // Định nghĩa các chuyển trạng thái hợp lệ dựa trên sơ đồ trạng thái
     switch (from) {
         case kDeviceStateUnknown:
-            // Can only go to starting
+            // Chỉ có thể sang starting
             return to == kDeviceStateStarting;
 
         case kDeviceStateStarting:
-            // Can go to wifi configuring or activating
+            // Có thể sang cấu hình wifi hoặc kích hoạt
             return to == kDeviceStateWifiConfiguring ||
                    to == kDeviceStateActivating;
 
         case kDeviceStateWifiConfiguring:
-            // Can go to activating (after wifi connected) or audio testing
+            // Có thể sang kích hoạt (sau khi wifi kết nối) hoặc kiểm tra âm thanh
             return to == kDeviceStateActivating ||
                    to == kDeviceStateAudioTesting;
 
         case kDeviceStateAudioTesting:
-            // Can go back to wifi configuring
+            // Có thể quay lại cấu hình wifi
             return to == kDeviceStateWifiConfiguring;
 
         case kDeviceStateActivating:
-            // Can go to upgrading, idle, or back to wifi configuring (on error)
+            // Có thể sang nâng cấp, rảnh, hoặc quay lại cấu hình wifi (khi lỗi)
             return to == kDeviceStateUpgrading ||
                    to == kDeviceStateIdle ||
                    to == kDeviceStateWifiConfiguring;
 
         case kDeviceStateUpgrading:
-            // Can go to idle (upgrade failed) or activating
+            // Có thể sang rảnh (nâng cấp thất bại) hoặc kích hoạt
             return to == kDeviceStateIdle ||
                    to == kDeviceStateActivating;
 
         case kDeviceStateIdle:
-            // Can go to connecting, listening (manual mode), speaking, activating, upgrading, or wifi configuring
+            // Có thể sang kết nối, lắng nghe (chế độ thủ công), nói, kích hoạt, nâng cấp hoặc cấu hình wifi
             return to == kDeviceStateConnecting ||
                    to == kDeviceStateListening ||
                    to == kDeviceStateSpeaking ||
@@ -80,17 +80,17 @@ bool DeviceStateMachine::IsValidTransition(DeviceState from, DeviceState to) con
                    to == kDeviceStateWifiConfiguring;
 
         case kDeviceStateConnecting:
-            // Can go to idle (failed) or listening (success)
+            // Có thể sang rảnh (thất bại) hoặc lắng nghe (thành công)
             return to == kDeviceStateIdle ||
                    to == kDeviceStateListening;
 
         case kDeviceStateListening:
-            // Can go to speaking or idle
+            // Có thể sang nói hoặc rảnh
             return to == kDeviceStateSpeaking ||
                    to == kDeviceStateIdle;
 
         case kDeviceStateSpeaking:
-            // Can go to listening or idle
+            // Có thể sang lắng nghe hoặc rảnh
             return to == kDeviceStateListening ||
                    to == kDeviceStateIdle;
 
@@ -98,7 +98,7 @@ bool DeviceStateMachine::IsValidTransition(DeviceState from, DeviceState to) con
             return to == kDeviceStateIdle;
 
         case kDeviceStateFatalError:
-            // Cannot transition out of fatal error
+            // Không thể chuyển ra khỏi trạng thái lỗi nghiêm trọng
             return false;
 
         default:
@@ -113,24 +113,24 @@ bool DeviceStateMachine::CanTransitionTo(DeviceState target) const {
 bool DeviceStateMachine::TransitionTo(DeviceState new_state) {
     DeviceState old_state = current_state_.load();
     
-    // No-op if already in the target state
+    // Không làm gì nếu đã ở trạng thái đích
     if (old_state == new_state) {
         return true;
     }
 
-    // Validate transition
+    // Kiểm tra tính hợp lệ của việc chuyển trạng thái
     if (!IsValidTransition(old_state, new_state)) {
         ESP_LOGW(TAG, "Invalid state transition: %s -> %s",
                  GetStateName(old_state), GetStateName(new_state));
         return false;
     }
 
-    // Perform transition
+    // Thực hiện chuyển trạng thái
     current_state_.store(new_state);
     ESP_LOGI(TAG, "State: %s -> %s",
              GetStateName(old_state), GetStateName(new_state));
 
-    // Notify callback
+    // Thông báo cho callback
     NotifyStateChange(old_state, new_state);
     return true;
 }

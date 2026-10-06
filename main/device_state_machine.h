@@ -9,57 +9,57 @@
 #include "device_state.h"
 
 /**
- * DeviceStateMachine - Manages device state transitions with validation
+ * DeviceStateMachine - Quản lý chuyển trạng thái thiết bị có kiểm tra hợp lệ
  * 
- * This class ensures strict state transition rules and provides a callback mechanism
- * for components to react to state changes.
+ * Lớp này đảm bảo các quy tắc chuyển trạng thái nghiêm ngặt và cung cấp cơ chế callback
+ * để các thành phần phản ứng với thay đổi trạng thái.
  */
 class DeviceStateMachine {
 public:
     DeviceStateMachine();
     ~DeviceStateMachine() = default;
 
-    // Delete copy constructor and assignment operator
+    // Xóa hàm khởi tạo sao chép và toán tử gán
     DeviceStateMachine(const DeviceStateMachine&) = delete;
     DeviceStateMachine& operator=(const DeviceStateMachine&) = delete;
 
     /**
-     * Get the current device state
+     * Lấy trạng thái thiết bị hiện tại
      */
     DeviceState GetState() const { return current_state_.load(); }
 
     /**
-     * Attempt to transition to a new state
-     * @param new_state The target state
-     * @return true if transition was successful, false if invalid transition
+     * Thử chuyển sang trạng thái mới
+     * @param new_state Trạng thái đích
+     * @return true nếu chuyển thành công, false nếu chuyển không hợp lệ
      */
     bool TransitionTo(DeviceState new_state);
 
     /**
-     * Check if transition to target state is valid from current state
+     * Kiểm tra việc chuyển sang trạng thái đích có hợp lệ từ trạng thái hiện tại không
      */
     bool CanTransitionTo(DeviceState target) const;
 
     /**
-     * State change callback type
-     * Parameters: old_state, new_state
+     * Kiểu callback thay đổi trạng thái
+     * Tham số: old_state, new_state
      */
     using StateCallback = std::function<void(DeviceState, DeviceState)>;
 
     /**
-     * Add a state change listener (observer pattern)
-     * Callback is invoked in the context of the caller of TransitionTo()
-     * @return listener id for removal
+     * Thêm bộ lắng nghe thay đổi trạng thái (mẫu observer)
+     * Callback được gọi trong ngữ cảnh của bên gọi TransitionTo()
+     * @return id của bộ lắng nghe để gỡ bỏ
      */
     int AddStateChangeListener(StateCallback callback);
 
     /**
-     * Remove a state change listener by id
+     * Gỡ bộ lắng nghe thay đổi trạng thái theo id
      */
     void RemoveStateChangeListener(int listener_id);
 
     /**
-     * Get state name string for logging
+     * Lấy chuỗi tên trạng thái để ghi log
      */
     static const char* GetStateName(DeviceState state);
 
@@ -70,12 +70,12 @@ private:
     std::mutex mutex_;
 
     /**
-     * Check if transition from source to target is valid
+     * Kiểm tra việc chuyển từ trạng thái nguồn sang đích có hợp lệ không
      */
     bool IsValidTransition(DeviceState from, DeviceState to) const;
 
     /**
-     * Notify callback of state change
+     * Thông báo cho callback về thay đổi trạng thái
      */
     void NotifyStateChange(DeviceState old_state, DeviceState new_state);
 };

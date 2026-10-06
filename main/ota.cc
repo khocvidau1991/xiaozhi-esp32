@@ -29,7 +29,7 @@
 
 Ota::Ota() {
 #ifdef ESP_EFUSE_BLOCK_USR_DATA
-    // Read Serial Number from efuse user_data
+    // Đọc số serial từ user_data của efuse
     uint8_t serial_number[33] = {0};
     if (esp_efuse_read_field_blob(ESP_EFUSE_USER_DATA, serial_number, 32 * 8) == ESP_OK) {
         if (serial_number[0] == 0) {
@@ -80,7 +80,7 @@ NetworkResult<> Ota::CheckVersion() {
     auto& board = Board::GetInstance();
     auto app_desc = esp_app_get_description();
 
-    // Check if there is a new firmware version available
+    // Kiểm tra có phiên bản firmware mới không
     current_version_ = app_desc->version;
     ESP_LOGI(TAG, "Current version: %s", current_version_.c_str());
 
@@ -114,9 +114,9 @@ NetworkResult<> Ota::CheckVersion() {
     data = http->ReadAll();
     http->Close();
 
-    // Response: { "firmware": { "version": "1.0.0", "url": "http://" } }
-    // Parse the JSON response and check if the version is newer
-    // If it is, set has_new_version_ to true and store the new version and URL
+    // Phản hồi: { "firmware": { "version": "1.0.0", "url": "http://" } }
+    // Phân tích phản hồi JSON và kiểm tra phiên bản có mới hơn không
+    // Nếu có, đặt has_new_version_ thành true và lưu phiên bản mới cùng URL
     
     cJSON *root = cJSON_Parse(data.c_str());
     if (root == NULL) {
@@ -197,17 +197,17 @@ NetworkResult<> Ota::CheckVersion() {
         cJSON *timezone_offset = cJSON_GetObjectItem(server_time, "timezone_offset");
         
         if (cJSON_IsNumber(timestamp)) {
-            // 设置系统时间
+            // Đặt thời gian hệ thống
             struct timeval tv;
             double ts = timestamp->valuedouble;
             
-            // 如果有时区偏移，计算本地时间
+            // Nếu có độ lệch múi giờ, tính thời gian địa phương
             if (cJSON_IsNumber(timezone_offset)) {
-                ts += (timezone_offset->valueint * 60 * 1000); // 转换分钟为毫秒
+                ts += (timezone_offset->valueint * 60 * 1000); // Chuyển phút thành mili giây
             }
             
-            tv.tv_sec = (time_t)(ts / 1000);  // 转换毫秒为秒
-            tv.tv_usec = (suseconds_t)((long long)ts % 1000) * 1000;  // 剩余的毫秒转换为微秒
+            tv.tv_sec = (time_t)(ts / 1000);  // Chuyển mili giây thành giây
+            tv.tv_usec = (suseconds_t)((long long)ts % 1000) * 1000;  // Chuyển phần mili giây còn lại thành micro giây
             settimeofday(&tv, NULL);
             has_server_time_ = true;
         }
@@ -228,14 +228,14 @@ NetworkResult<> Ota::CheckVersion() {
         }
 
         if (cJSON_IsString(version) && cJSON_IsString(url)) {
-            // Check if the version is newer, for example, 0.1.0 is newer than 0.0.1
+            // Kiểm tra phiên bản có mới hơn không, ví dụ 0.1.0 mới hơn 0.0.1
             has_new_version_ = IsNewVersionAvailable(current_version_, firmware_version_);
             if (has_new_version_) {
                 ESP_LOGI(TAG, "New version available: %s", firmware_version_.c_str());
             } else {
                 ESP_LOGI(TAG, "Current is the latest version");
             }
-            // If the force flag is set to 1, the given version is forced to be installed
+            // Nếu cờ force bằng 1, phiên bản được chỉ định sẽ bị bắt buộc cài đặt
             cJSON *force = cJSON_GetObjectItem(firmware, "force");
             if (cJSON_IsNumber(force) && force->valueint == 1) {
                 has_new_version_ = true;
@@ -312,7 +312,7 @@ bool Ota::Upgrade(const std::string& firmware_url, std::function<void(int progre
         return false;
     }
 
-    size_t buffer_offset = 0;  // Current data size in buffer
+    size_t buffer_offset = 0;  // Kích thước dữ liệu hiện tại trong bộ đệm
     size_t total_read = 0, recent_read = 0;
     auto last_calc_time = esp_timer_get_time();
     while (true) {
@@ -324,7 +324,7 @@ bool Ota::Upgrade(const std::string& firmware_url, std::function<void(int progre
         }
         int n = *ret;
 
-        // Calculate speed and progress every second
+        // Tính tốc độ và tiến độ mỗi giây
         recent_read += n;
         total_read += n;
         buffer_offset += n;
@@ -356,7 +356,7 @@ bool Ota::Upgrade(const std::string& firmware_url, std::function<void(int progre
             }
         }
 
-        // Write to flash when buffer is full (4KB) or it's the last chunk
+        // Ghi vào flash khi bộ đệm đầy (4KB) hoặc là khối cuối cùng
         bool is_last_chunk = (n == 0);
         if (buffer_offset == PAGE_SIZE || (is_last_chunk && buffer_offset > 0)) {
             auto err = esp_ota_write(update_handle, buffer, buffer_offset);
@@ -402,9 +402,9 @@ bool Ota::StartUpgrade(std::function<void(int progress, size_t speed)> callback)
 }
 
 
-// Versions are compared as dot-separated decimal numbers. Parsing must never throw: exceptions are
-// disabled in this project, so a malformed string from the server would otherwise terminate the
-// firmware instead of being reported as an error.
+// Các phiên bản được so sánh như các số thập phân phân tách bằng dấu chấm. Việc phân tích không được ném ngoại lệ:
+// ngoại lệ bị tắt trong dự án này, nên chuỗi sai định dạng từ máy chủ sẽ làm firmware
+// dừng hẳn thay vì được báo là lỗi.
 std::expected<std::vector<int>, std::string> Ota::ParseVersion(const std::string& version) {
     std::vector<int> version_numbers;
     size_t start = 0;
@@ -438,8 +438,8 @@ bool Ota::IsNewVersionAvailable(const std::string& currentVersion, const std::st
 
     auto newer = ParseVersion(newVersion);
     if (!newer) {
-        // Never report an update we cannot compare, otherwise a malformed version string would
-        // trigger a firmware downgrade or an endless upgrade loop.
+        // Không bao giờ báo cập nhật mà ta không thể so sánh, nếu không chuỗi phiên bản sai định dạng sẽ
+        // gây hạ cấp firmware hoặc vòng lặp nâng cấp vô tận.
         ESP_LOGW(TAG, "Ignoring firmware version \"%s\": %s", newVersion.c_str(),
                  newer.error().c_str());
         return false;
@@ -463,9 +463,9 @@ std::string Ota::GetActivationPayload() {
 
     std::string hmac_hex;
 #ifdef SOC_HMAC_SUPPORTED
-    uint8_t hmac_result[32]; // SHA-256 输出为32字节
+    uint8_t hmac_result[32]; // Đầu ra SHA-256 là 32 byte
     
-    // 使用Key0计算HMAC
+    // Dùng Key0 để tính HMAC
     esp_err_t ret = esp_hmac_calculate(HMAC_KEY0, (uint8_t*)activation_challenge_.data(), activation_challenge_.size(), hmac_result);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "HMAC calculation failed: %s", esp_err_to_name(ret));
