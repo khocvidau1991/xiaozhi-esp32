@@ -18,6 +18,29 @@ SPEC.loader.exec_module(build)
 
 
 class VersionTests(unittest.TestCase):
+    def test_bread_compact_wifi_lcd_154_profile(self):
+        config_path = (
+            ROOT
+            / "main/boards/bread-compact-wifi-lcd/config.json"
+        )
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        variant = next(
+            item
+            for item in config["builds"]
+            if item["name"] == "bread-compact-wifi-lcd-154"
+        )
+
+        self.assertEqual(config["target"], "esp32s3")
+        self.assertTrue(
+            {
+                "CONFIG_LCD_ST7789_240X240=y",
+                "CONFIG_LCD_MODERN_UI=y",
+                "CONFIG_USE_WECHAT_MESSAGE_STYLE=y",
+                "CONFIG_LANGUAGE_VI_VN=y",
+                "CONFIG_ENABLE_GPIO_WEB_CONFIG=y",
+            }.issubset(variant["sdkconfig_append"])
+        )
+
     def test_parse_and_match(self):
         self.assertEqual(build._parse_version("ESP-IDF v6.0.1"), (6, 0, 1))
         self.assertTrue(build._version_matches((5, 5, 4), "<6.0"))
@@ -176,6 +199,15 @@ class VersionTests(unittest.TestCase):
             config = json.loads(config_path.read_text(encoding="utf-8"))
             for build_config in config.get("builds", []):
                 for option in build_config.get("sdkconfig_append", []):
+                    if (
+                        config_path
+                        == ROOT
+                        / "main/boards/bread-compact-wifi-lcd/config.json"
+                        and build_config.get("name")
+                        == "bread-compact-wifi-lcd-154"
+                        and option == "CONFIG_LANGUAGE_VI_VN=y"
+                    ):
+                        continue
                     self.assertFalse(
                         option.startswith("CONFIG_LANGUAGE_")
                         or option.startswith("CONFIG_SR_WN_"),

@@ -33,6 +33,17 @@ void LcdDisplay::InitializeLcdThemes() {
 
     // light theme
     auto light_theme = new LvglTheme("light");
+#if CONFIG_LCD_MODERN_UI
+    light_theme->set_background_color(lv_color_hex(0xF5F7FA));
+    light_theme->set_text_color(lv_color_hex(0x1C2430));
+    light_theme->set_chat_background_color(lv_color_hex(0xF5F7FA));
+    light_theme->set_user_bubble_color(lv_color_hex(0x4F8BFF));
+    light_theme->set_assistant_bubble_color(lv_color_hex(0xFFFFFF));
+    light_theme->set_system_bubble_color(lv_color_hex(0xE6EAF0));
+    light_theme->set_system_text_color(lv_color_hex(0x586174));
+    light_theme->set_border_color(lv_color_hex(0xD9DEE6));
+    light_theme->set_low_battery_color(lv_color_hex(0xE5484D));
+#else
     light_theme->set_background_color(lv_color_hex(0xFFFFFF));
     light_theme->set_text_color(lv_color_hex(0x000000));
     light_theme->set_chat_background_color(lv_color_hex(0xE0E0E0));
@@ -42,6 +53,7 @@ void LcdDisplay::InitializeLcdThemes() {
     light_theme->set_system_text_color(lv_color_hex(0x000000));
     light_theme->set_border_color(lv_color_hex(0x000000));
     light_theme->set_low_battery_color(lv_color_hex(0x000000));
+#endif
     light_theme->set_text_font(text_font);
     light_theme->set_icon_font(icon_font);
     light_theme->set_large_icon_font(large_icon_font);
@@ -49,6 +61,17 @@ void LcdDisplay::InitializeLcdThemes() {
 
     // dark theme
     auto dark_theme = new LvglTheme("dark");
+#if CONFIG_LCD_MODERN_UI
+    dark_theme->set_background_color(lv_color_hex(0x0F1115));
+    dark_theme->set_text_color(lv_color_hex(0xECEFF4));
+    dark_theme->set_chat_background_color(lv_color_hex(0x0F1115));
+    dark_theme->set_user_bubble_color(lv_color_hex(0x3B82F6));
+    dark_theme->set_assistant_bubble_color(lv_color_hex(0x1F2430));
+    dark_theme->set_system_bubble_color(lv_color_hex(0x2A2F3C));
+    dark_theme->set_system_text_color(lv_color_hex(0xA8B0BF));
+    dark_theme->set_border_color(lv_color_hex(0x2F3542));
+    dark_theme->set_low_battery_color(lv_color_hex(0xF0555A));
+#else
     dark_theme->set_background_color(lv_color_hex(0x000000));
     dark_theme->set_text_color(lv_color_hex(0xFFFFFF));
     dark_theme->set_chat_background_color(lv_color_hex(0x1F1F1F));
@@ -58,6 +81,7 @@ void LcdDisplay::InitializeLcdThemes() {
     dark_theme->set_system_text_color(lv_color_hex(0xFFFFFF));
     dark_theme->set_border_color(lv_color_hex(0xFFFFFF));
     dark_theme->set_low_battery_color(lv_color_hex(0xFF0000));
+#endif
     dark_theme->set_text_font(text_font);
     dark_theme->set_icon_font(icon_font);
     dark_theme->set_large_icon_font(large_icon_font);
@@ -420,9 +444,16 @@ void LcdDisplay::SetupUI() {
     top_bar_ = lv_obj_create(container_);
     lv_obj_set_size(top_bar_, LV_HOR_RES, LV_SIZE_CONTENT);
     lv_obj_set_style_radius(top_bar_, 0, 0);
+#if CONFIG_LCD_MODERN_UI
+    lv_obj_set_style_bg_opa(top_bar_, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_side(top_bar_, LV_BORDER_SIDE_BOTTOM, 0);
+    lv_obj_set_style_border_width(top_bar_, 1, 0);
+    lv_obj_set_style_border_color(top_bar_, lvgl_theme->border_color(), 0);
+#else
     lv_obj_set_style_bg_opa(top_bar_, LV_OPA_50, 0);  // 50% opacity background
-    lv_obj_set_style_bg_color(top_bar_, lvgl_theme->background_color(), 0);
     lv_obj_set_style_border_width(top_bar_, 0, 0);
+#endif
+    lv_obj_set_style_bg_color(top_bar_, lvgl_theme->background_color(), 0);
     lv_obj_set_style_pad_all(top_bar_, 0, 0);
     lv_obj_set_style_pad_top(top_bar_, lvgl_theme->spacing(2), 0);
     lv_obj_set_style_pad_bottom(top_bar_, lvgl_theme->spacing(2), 0);
@@ -494,7 +525,11 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_radius(content_, 0, 0);
     lv_obj_set_width(content_, LV_HOR_RES);
     lv_obj_set_flex_grow(content_, 1);
+#if CONFIG_LCD_MODERN_UI
+    lv_obj_set_style_pad_all(content_, 8, 0);
+#else
     lv_obj_set_style_pad_all(content_, lvgl_theme->spacing(4), 0);
+#endif
     lv_obj_set_style_border_width(content_, 0, 0);
     lv_obj_set_style_bg_color(content_, lvgl_theme->chat_background_color(),
                               0);  // Background for chat area
@@ -506,7 +541,11 @@ void LcdDisplay::SetupUI() {
     // Create a flex container for chat messages
     lv_obj_set_flex_flow(content_, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(content_, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+#if CONFIG_LCD_MODERN_UI
+    lv_obj_set_style_pad_row(content_, 8, 0);
+#else
     lv_obj_set_style_pad_row(content_, lvgl_theme->spacing(4), 0);  // Space between messages
+#endif
 
     // We'll create chat messages dynamically in SetChatMessage
     chat_message_label_ = nullptr;
@@ -611,17 +650,30 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
 
     // Create a message bubble
     lv_obj_t* msg_bubble = lv_obj_create(content_);
+#if CONFIG_LCD_MODERN_UI
+    lv_obj_set_style_pad_all(msg_bubble, 0, 0);
+    lv_obj_set_style_radius(msg_bubble, LV_HOR_RES >= 240 ? 14 : 10, 0);
+    lv_obj_set_style_pad_hor(msg_bubble, 10, 0);
+    lv_obj_set_style_pad_ver(msg_bubble, 7, 0);
+#else
     lv_obj_set_style_radius(msg_bubble, 8, 0);
+#endif
     lv_obj_set_scrollbar_mode(msg_bubble, LV_SCROLLBAR_MODE_OFF);
     lv_obj_set_style_border_width(msg_bubble, 0, 0);
+#if !CONFIG_LCD_MODERN_UI
     lv_obj_set_style_pad_all(msg_bubble, lvgl_theme->spacing(4), 0);
+#endif
 
     // Create the message text
     lv_obj_t* msg_text = lv_label_create(msg_bubble);
     lv_label_set_text(msg_text, content);
 
     // Calculate bubble width constraints
+#if CONFIG_LCD_MODERN_UI
+    lv_coord_t max_width = LV_HOR_RES * 86 / 100 - 12;
+#else
     lv_coord_t max_width = LV_HOR_RES * 85 / 100 - 16;  // 85% of screen width
+#endif
     lv_coord_t min_width = 20;
 
     // Let LVGL calculate the natural text width first
@@ -647,11 +699,16 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
 
     // Set alignment and style based on message role
     if (strcmp(role, "user") == 0) {
-        // User messages are right-aligned with green background
+        // Tin nhắn của người dùng được căn phải.
         lv_obj_set_style_bg_color(msg_bubble, lvgl_theme->user_bubble_color(), 0);
+#if CONFIG_LCD_MODERN_UI
+        lv_obj_set_style_bg_opa(msg_bubble, LV_OPA_COVER, 0);
+        lv_obj_set_style_text_color(msg_text, lv_color_white(), 0);
+#else
         lv_obj_set_style_bg_opa(msg_bubble, LV_OPA_70, 0);
         // Set text color for contrast
         lv_obj_set_style_text_color(msg_text, lvgl_theme->text_color(), 0);
+#endif
 
         // Set custom attribute to mark bubble type
         lv_obj_set_user_data(msg_bubble, (void*)"user");
@@ -665,7 +722,11 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
     } else if (strcmp(role, "assistant") == 0) {
         // Assistant messages are left-aligned with white background
         lv_obj_set_style_bg_color(msg_bubble, lvgl_theme->assistant_bubble_color(), 0);
+#if CONFIG_LCD_MODERN_UI
+        lv_obj_set_style_bg_opa(msg_bubble, LV_OPA_COVER, 0);
+#else
         lv_obj_set_style_bg_opa(msg_bubble, LV_OPA_70, 0);
+#endif
         // Set text color for contrast
         lv_obj_set_style_text_color(msg_text, lvgl_theme->text_color(), 0);
 
@@ -681,7 +742,11 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
     } else if (strcmp(role, "system") == 0) {
         // System messages are center-aligned with light gray background
         lv_obj_set_style_bg_color(msg_bubble, lvgl_theme->system_bubble_color(), 0);
+#if CONFIG_LCD_MODERN_UI
+        lv_obj_set_style_bg_opa(msg_bubble, LV_OPA_COVER, 0);
+#else
         lv_obj_set_style_bg_opa(msg_bubble, LV_OPA_70, 0);
+#endif
         // Set text color for contrast
         lv_obj_set_style_text_color(msg_text, lvgl_theme->system_text_color(), 0);
 
@@ -712,7 +777,11 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
         lv_obj_set_parent(msg_bubble, container);
 
         // Right align the bubble in the container
+#if CONFIG_LCD_MODERN_UI
+        lv_obj_align(msg_bubble, LV_ALIGN_RIGHT_MID, -8, 0);
+#else
         lv_obj_align(msg_bubble, LV_ALIGN_RIGHT_MID, -25, 0);
+#endif
 
         // Auto-scroll to this container
         lv_obj_scroll_to_view_recursive(container, LV_ANIM_ON);
@@ -906,9 +975,16 @@ void LcdDisplay::SetupUI() {
     top_bar_ = lv_obj_create(screen);
     lv_obj_set_size(top_bar_, LV_HOR_RES, LV_SIZE_CONTENT);
     lv_obj_set_style_radius(top_bar_, 0, 0);
+#if CONFIG_LCD_MODERN_UI
+    lv_obj_set_style_bg_opa(top_bar_, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_side(top_bar_, LV_BORDER_SIDE_BOTTOM, 0);
+    lv_obj_set_style_border_width(top_bar_, 1, 0);
+    lv_obj_set_style_border_color(top_bar_, lvgl_theme->border_color(), 0);
+#else
     lv_obj_set_style_bg_opa(top_bar_, LV_OPA_50, 0);  // 50% opacity background
-    lv_obj_set_style_bg_color(top_bar_, lvgl_theme->background_color(), 0);
     lv_obj_set_style_border_width(top_bar_, 0, 0);
+#endif
+    lv_obj_set_style_bg_color(top_bar_, lvgl_theme->background_color(), 0);
     lv_obj_set_style_pad_all(top_bar_, 0, 0);
     lv_obj_set_style_pad_top(top_bar_, lvgl_theme->spacing(2), 0);
     lv_obj_set_style_pad_bottom(top_bar_, lvgl_theme->spacing(2), 0);
@@ -979,21 +1055,40 @@ void LcdDisplay::SetupUI() {
 #if CONFIG_USE_MULTILINE_CHAT_MESSAGE
     /* Bottom bar - auto height, grows upward with wrapped text */
     bottom_bar_ = lv_obj_create(screen);
+#if CONFIG_LCD_MODERN_UI
+    lv_obj_set_width(bottom_bar_, LV_HOR_RES - 12);
+    lv_obj_set_style_radius(bottom_bar_, 14, 0);
+    lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_COVER, 0);
+    lv_obj_set_style_pad_all(bottom_bar_, 8, 0);
+    lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, -4);
+#else
     lv_obj_set_width(bottom_bar_, LV_HOR_RES);
+    lv_obj_set_style_radius(bottom_bar_, 0, 0);
+    lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_50, 0);
+    lv_obj_set_style_pad_all(bottom_bar_, lvgl_theme->spacing(4), 0);
+    lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, 0);
+#endif
     lv_obj_set_height(bottom_bar_, LV_SIZE_CONTENT);
+#if CONFIG_LCD_MODERN_UI
+    lv_obj_set_style_bg_color(bottom_bar_, lvgl_theme->assistant_bubble_color(), 0);
+    lv_obj_set_style_text_color(bottom_bar_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_border_width(bottom_bar_, 0, 0);
+#else
     lv_obj_set_style_radius(bottom_bar_, 0, 0);
     lv_obj_set_style_bg_color(bottom_bar_, lvgl_theme->background_color(), 0);
-    lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_50, 0);
     lv_obj_set_style_text_color(bottom_bar_, lvgl_theme->text_color(), 0);
-    lv_obj_set_style_pad_all(bottom_bar_, lvgl_theme->spacing(4), 0);
     lv_obj_set_style_border_width(bottom_bar_, 0, 0);
+#endif
     lv_obj_set_scrollbar_mode(bottom_bar_, LV_SCROLLBAR_MODE_OFF);
-    lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, 0);
 
     /* chat_message_label_ placed in bottom_bar_, multiline wrapped display */
     chat_message_label_ = lv_label_create(bottom_bar_);
     lv_label_set_text(chat_message_label_, "");
+#if CONFIG_LCD_MODERN_UI
+    lv_obj_set_width(chat_message_label_, LV_HOR_RES - 28);
+#else
     lv_obj_set_width(chat_message_label_, LV_HOR_RES - lvgl_theme->spacing(8));
+#endif
     lv_label_set_long_mode(chat_message_label_, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_align(chat_message_label_, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(chat_message_label_, lvgl_theme->text_color(), 0);
@@ -1002,21 +1097,39 @@ void LcdDisplay::SetupUI() {
 #else
     /* Top layer: Bottom bar - fixed height at bottom */
     bottom_bar_ = lv_obj_create(screen);
+#if CONFIG_LCD_MODERN_UI
+    lv_obj_set_size(bottom_bar_, LV_HOR_RES - 12, text_font->line_height + 16);
+    lv_obj_set_style_radius(bottom_bar_, 16, 0);
+    lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_COVER, 0);
+    lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, -4);
+#else
     lv_obj_set_size(bottom_bar_, LV_HOR_RES, text_font->line_height + lvgl_theme->spacing(8));
     lv_obj_set_style_radius(bottom_bar_, 0, 0);
+#endif
     lv_obj_set_style_bg_color(bottom_bar_, lvgl_theme->background_color(), 0);
     lv_obj_set_style_text_color(bottom_bar_, lvgl_theme->text_color(), 0);
+#if CONFIG_LCD_MODERN_UI
+    lv_obj_set_style_bg_color(bottom_bar_, lvgl_theme->assistant_bubble_color(), 0);
+    lv_obj_set_style_pad_all(bottom_bar_, 4, 0);
+#else
     lv_obj_set_style_pad_all(bottom_bar_, 0, 0);
     lv_obj_set_style_pad_left(bottom_bar_, lvgl_theme->spacing(4), 0);
     lv_obj_set_style_pad_right(bottom_bar_, lvgl_theme->spacing(4), 0);
+#endif
     lv_obj_set_style_border_width(bottom_bar_, 0, 0);
     lv_obj_set_scrollbar_mode(bottom_bar_, LV_SCROLLBAR_MODE_OFF);
+#if !CONFIG_LCD_MODERN_UI
     lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, 0);
+#endif
 
     /* chat_message_label_ placed in bottom_bar_, single-line horizontal scroll */
     chat_message_label_ = lv_label_create(bottom_bar_);
     lv_label_set_text(chat_message_label_, "");
+#if CONFIG_LCD_MODERN_UI
+    lv_obj_set_width(chat_message_label_, LV_HOR_RES - 28);
+#else
     lv_obj_set_width(chat_message_label_, LV_HOR_RES - lvgl_theme->spacing(8));
+#endif
     lv_label_set_long_mode(chat_message_label_, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_style_text_align(chat_message_label_, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(chat_message_label_, lvgl_theme->text_color(), 0);
@@ -1112,7 +1225,11 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
     // Re-align bottom_bar_ after text change so it stays anchored to the bottom
     // as its height adapts to the wrapped content.
     if (bottom_bar_ != nullptr) {
+#if CONFIG_LCD_MODERN_UI
+        lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, -4);
+#else
         lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, 0);
+#endif
     }
 #endif
 }
