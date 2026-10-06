@@ -1,9 +1,9 @@
 #ifndef BREAD_COMPACT_WIFI_LCD_GPIO_CONFIG_H
 #define BREAD_COMPACT_WIFI_LCD_GPIO_CONFIG_H
 
-#include "config.h"
-
 #include <driver/gpio.h>
+
+#include "config.h"
 
 struct CauHinhGpio {
     gpio_num_t man_hinh_mosi = DISPLAY_MOSI_PIN;

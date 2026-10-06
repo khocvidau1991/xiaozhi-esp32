@@ -51,25 +51,40 @@ struct TruongJson {
 
 #ifdef AUDIO_I2S_METHOD_SIMPLEX
 const std::array<TruongJson, 18> TRUONG_I2S_DON = {{
-    {"mosi", &CauHinhGpio::man_hinh_mosi}, {"clk", &CauHinhGpio::man_hinh_clk},
-    {"dc", &CauHinhGpio::man_hinh_dc}, {"rst", &CauHinhGpio::man_hinh_rst},
-    {"cs", &CauHinhGpio::man_hinh_cs}, {"backlight", &CauHinhGpio::den_nen},
-    {"led", &CauHinhGpio::den_led}, {"boot", &CauHinhGpio::nut_khoi_dong},
-    {"touch", &CauHinhGpio::nut_cam_ung}, {"volume_up", &CauHinhGpio::nut_tang_am_luong},
-    {"volume_down", &CauHinhGpio::nut_giam_am_luong}, {"lamp", &CauHinhGpio::den_lamp},
-    {"mic_ws", &CauHinhGpio::mic_ws}, {"mic_sck", &CauHinhGpio::mic_sck},
-    {"mic_din", &CauHinhGpio::mic_din}, {"spk_dout", &CauHinhGpio::loa_dout},
-    {"spk_bclk", &CauHinhGpio::loa_bclk}, {"spk_lrck", &CauHinhGpio::loa_lrck},
+    {"mosi", &CauHinhGpio::man_hinh_mosi},
+    {"clk", &CauHinhGpio::man_hinh_clk},
+    {"dc", &CauHinhGpio::man_hinh_dc},
+    {"rst", &CauHinhGpio::man_hinh_rst},
+    {"cs", &CauHinhGpio::man_hinh_cs},
+    {"backlight", &CauHinhGpio::den_nen},
+    {"led", &CauHinhGpio::den_led},
+    {"boot", &CauHinhGpio::nut_khoi_dong},
+    {"touch", &CauHinhGpio::nut_cam_ung},
+    {"volume_up", &CauHinhGpio::nut_tang_am_luong},
+    {"volume_down", &CauHinhGpio::nut_giam_am_luong},
+    {"lamp", &CauHinhGpio::den_lamp},
+    {"mic_ws", &CauHinhGpio::mic_ws},
+    {"mic_sck", &CauHinhGpio::mic_sck},
+    {"mic_din", &CauHinhGpio::mic_din},
+    {"spk_dout", &CauHinhGpio::loa_dout},
+    {"spk_bclk", &CauHinhGpio::loa_bclk},
+    {"spk_lrck", &CauHinhGpio::loa_lrck},
 }};
 #endif
 
 const std::array<TruongJson, 12> TRUONG_CHUNG = {{
-    {"mosi", &CauHinhGpio::man_hinh_mosi}, {"clk", &CauHinhGpio::man_hinh_clk},
-    {"dc", &CauHinhGpio::man_hinh_dc}, {"rst", &CauHinhGpio::man_hinh_rst},
-    {"cs", &CauHinhGpio::man_hinh_cs}, {"backlight", &CauHinhGpio::den_nen},
-    {"led", &CauHinhGpio::den_led}, {"boot", &CauHinhGpio::nut_khoi_dong},
-    {"touch", &CauHinhGpio::nut_cam_ung}, {"volume_up", &CauHinhGpio::nut_tang_am_luong},
-    {"volume_down", &CauHinhGpio::nut_giam_am_luong}, {"lamp", &CauHinhGpio::den_lamp},
+    {"mosi", &CauHinhGpio::man_hinh_mosi},
+    {"clk", &CauHinhGpio::man_hinh_clk},
+    {"dc", &CauHinhGpio::man_hinh_dc},
+    {"rst", &CauHinhGpio::man_hinh_rst},
+    {"cs", &CauHinhGpio::man_hinh_cs},
+    {"backlight", &CauHinhGpio::den_nen},
+    {"led", &CauHinhGpio::den_led},
+    {"boot", &CauHinhGpio::nut_khoi_dong},
+    {"touch", &CauHinhGpio::nut_cam_ung},
+    {"volume_up", &CauHinhGpio::nut_tang_am_luong},
+    {"volume_down", &CauHinhGpio::nut_giam_am_luong},
+    {"lamp", &CauHinhGpio::den_lamp},
 }};
 
 bool DocSoChan(cJSON* doi_tuong, const char* ten, gpio_num_t& so_chan) {
@@ -112,20 +127,19 @@ esp_err_t GuiJson(httpd_req_t* yeu_cau, cJSON* doi_tuong) {
     return ket_qua;
 }
 
-esp_err_t GuiThongBao(httpd_req_t* yeu_cau, const char* truong, const char* thong_bao, int ma_loi = 400) {
+esp_err_t GuiThongBao(httpd_req_t* yeu_cau, const char* truong, const char* thong_bao,
+                      int ma_loi = 400) {
     cJSON* doi_tuong = cJSON_CreateObject();
     if (doi_tuong == nullptr) return ESP_FAIL;
     cJSON_AddStringToObject(doi_tuong, truong, thong_bao);
     if (ma_loi != 0) httpd_resp_set_status(yeu_cau, "400 Bad Request");
     return GuiJson(yeu_cau, doi_tuong);
 }
-}
+}  // namespace
 
 MayChuWebCauHinhGpio::MayChuWebCauHinhGpio(CauHinhGpio& cau_hinh) : cau_hinh_(cau_hinh) {}
 
-MayChuWebCauHinhGpio::~MayChuWebCauHinhGpio() {
-    Dung();
-}
+MayChuWebCauHinhGpio::~MayChuWebCauHinhGpio() { Dung(); }
 
 void MayChuWebCauHinhGpio::BatDau(uint16_t cong) {
     if (may_chu_ != nullptr && cong_ == cong) return;
@@ -147,7 +161,10 @@ void MayChuWebCauHinhGpio::BatDau(uint16_t cong) {
         {.uri = "/gpio", .method = HTTP_GET, .handler = HienTrang, .user_ctx = this},
         {.uri = "/api/gpio", .method = HTTP_GET, .handler = LayCauHinh, .user_ctx = this},
         {.uri = "/api/gpio", .method = HTTP_POST, .handler = LuuCauHinh, .user_ctx = this},
-        {.uri = "/api/gpio/reset", .method = HTTP_POST, .handler = KhoiPhucCauHinh, .user_ctx = this},
+        {.uri = "/api/gpio/reset",
+         .method = HTTP_POST,
+         .handler = KhoiPhucCauHinh,
+         .user_ctx = this},
         {.uri = "/api/reboot", .method = HTTP_POST, .handler = KhoiDongLai, .user_ctx = this},
     };
     for (auto& uri : cac_uri) {
@@ -184,9 +201,11 @@ esp_err_t MayChuWebCauHinhGpio::LayCauHinh(httpd_req_t* yeu_cau) {
     }
 #else
     constexpr std::array<const char*, 4> ten_i2s = {"i2s_ws", "i2s_bclk", "i2s_din", "i2s_dout"};
-    const std::array<gpio_num_t, 4> chan_i2s = {may_chu->cau_hinh_.i2s_ws, may_chu->cau_hinh_.i2s_bclk,
-                                                may_chu->cau_hinh_.i2s_din, may_chu->cau_hinh_.i2s_dout};
-    for (size_t i = 0; i < ten_i2s.size(); ++i) cJSON_AddNumberToObject(doi_tuong, ten_i2s[i], chan_i2s[i]);
+    const std::array<gpio_num_t, 4> chan_i2s = {
+        may_chu->cau_hinh_.i2s_ws, may_chu->cau_hinh_.i2s_bclk, may_chu->cau_hinh_.i2s_din,
+        may_chu->cau_hinh_.i2s_dout};
+    for (size_t i = 0; i < ten_i2s.size(); ++i)
+        cJSON_AddNumberToObject(doi_tuong, ten_i2s[i], chan_i2s[i]);
 #endif
 #ifndef AUDIO_I2S_METHOD_SIMPLEX
     for (const auto& truong : TRUONG_CHUNG) {
@@ -199,7 +218,8 @@ esp_err_t MayChuWebCauHinhGpio::LayCauHinh(httpd_req_t* yeu_cau) {
 esp_err_t MayChuWebCauHinhGpio::LuuCauHinh(httpd_req_t* yeu_cau) {
     auto* may_chu = static_cast<MayChuWebCauHinhGpio*>(yeu_cau->user_ctx);
     std::string noi_dung;
-    if (!NhanJson(yeu_cau, noi_dung)) return GuiThongBao(yeu_cau, "error", "Dữ liệu gửi lên không hợp lệ.");
+    if (!NhanJson(yeu_cau, noi_dung))
+        return GuiThongBao(yeu_cau, "error", "Dữ liệu gửi lên không hợp lệ.");
     cJSON* doi_tuong = cJSON_Parse(noi_dung.c_str());
     if (!cJSON_IsObject(doi_tuong)) {
         cJSON_Delete(doi_tuong);
@@ -208,7 +228,8 @@ esp_err_t MayChuWebCauHinhGpio::LuuCauHinh(httpd_req_t* yeu_cau) {
 
     CauHinhGpio cau_hinh = may_chu->cau_hinh_;
     bool hop_le = true;
-#define DOC_CHAN(ten_json, ten_truong) hop_le = hop_le && DocSoChan(doi_tuong, ten_json, cau_hinh.ten_truong)
+#define DOC_CHAN(ten_json, ten_truong) \
+    hop_le = hop_le && DocSoChan(doi_tuong, ten_json, cau_hinh.ten_truong)
     DOC_CHAN("mosi", man_hinh_mosi);
     DOC_CHAN("clk", man_hinh_clk);
     DOC_CHAN("dc", man_hinh_dc);
@@ -237,18 +258,21 @@ esp_err_t MayChuWebCauHinhGpio::LuuCauHinh(httpd_req_t* yeu_cau) {
 #undef DOC_CHAN
     cJSON_Delete(doi_tuong);
     if (!hop_le || !cau_hinh.KiemTraHopLe()) {
-        return GuiThongBao(yeu_cau, "error", "Chân GPIO không hợp lệ, bị trùng hoặc dành riêng cho flash/PSRAM.");
+        return GuiThongBao(yeu_cau, "error",
+                           "Chân GPIO không hợp lệ, bị trùng hoặc dành riêng cho flash/PSRAM.");
     }
     may_chu->cau_hinh_ = cau_hinh;
     may_chu->cau_hinh_.Luu();
-    return GuiThongBao(yeu_cau, "message", "Đã lưu cấu hình. Thiết bị sẽ khởi động lại để áp dụng.", 0);
+    return GuiThongBao(yeu_cau, "message", "Đã lưu cấu hình. Thiết bị sẽ khởi động lại để áp dụng.",
+                       0);
 }
 
 esp_err_t MayChuWebCauHinhGpio::KhoiPhucCauHinh(httpd_req_t* yeu_cau) {
     auto* may_chu = static_cast<MayChuWebCauHinhGpio*>(yeu_cau->user_ctx);
     may_chu->cau_hinh_ = CauHinhGpio{};
     may_chu->cau_hinh_.Luu();
-    return GuiThongBao(yeu_cau, "message", "Đã khôi phục chân GPIO mặc định. Thiết bị sẽ khởi động lại.", 0);
+    return GuiThongBao(yeu_cau, "message",
+                       "Đã khôi phục chân GPIO mặc định. Thiết bị sẽ khởi động lại.", 0);
 }
 
 esp_err_t MayChuWebCauHinhGpio::KhoiDongLai(httpd_req_t* yeu_cau) {

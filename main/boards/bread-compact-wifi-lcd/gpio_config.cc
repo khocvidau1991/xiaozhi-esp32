@@ -1,8 +1,5 @@
 #include "gpio_config.h"
 
-#include "config.h"
-#include "settings.h"
-
 #include <esp_log.h>
 #include <esp_system.h>
 #include <freertos/FreeRTOS.h>
@@ -11,10 +8,14 @@
 
 #include <array>
 
+#include "config.h"
+#include "settings.h"
+
 #define TAG "CauHinhGpio"
 
 namespace {
 constexpr char NAMESPACE_GPIO[] = "gpio";
+#ifdef CONFIG_ENABLE_GPIO_WEB_CONFIG
 constexpr char KHOA_SO_LAN_LOI[] = "failures";
 
 void XoaSoLanLoiSauKhiKhoiDongOnDinh(void*) {
@@ -27,59 +28,79 @@ void XoaSoLanLoiSauKhiKhoiDongOnDinh(void*) {
 }
 
 bool LaLoiKhoiDong(esp_reset_reason_t ly_do) {
-    return ly_do == ESP_RST_PANIC || ly_do == ESP_RST_INT_WDT ||
-           ly_do == ESP_RST_TASK_WDT || ly_do == ESP_RST_WDT ||
-           ly_do == ESP_RST_BROWNOUT;
+    return ly_do == ESP_RST_PANIC || ly_do == ESP_RST_INT_WDT || ly_do == ESP_RST_TASK_WDT ||
+           ly_do == ESP_RST_WDT;
 }
-}
+#endif
+}  // namespace
 
 CauHinhGpio CauHinhGpio::Tai() {
     CauHinhGpio cau_hinh;
-    Settings cai_dat(NAMESPACE_GPIO, true);
-    cau_hinh.man_hinh_mosi = static_cast<gpio_num_t>(cai_dat.GetInt("mosi", cau_hinh.man_hinh_mosi));
-    cau_hinh.man_hinh_clk = static_cast<gpio_num_t>(cai_dat.GetInt("clk", cau_hinh.man_hinh_clk));
-    cau_hinh.man_hinh_dc = static_cast<gpio_num_t>(cai_dat.GetInt("dc", cau_hinh.man_hinh_dc));
-    cau_hinh.man_hinh_rst = static_cast<gpio_num_t>(cai_dat.GetInt("rst", cau_hinh.man_hinh_rst));
-    cau_hinh.man_hinh_cs = static_cast<gpio_num_t>(cai_dat.GetInt("cs", cau_hinh.man_hinh_cs));
-    cau_hinh.den_nen = static_cast<gpio_num_t>(cai_dat.GetInt("backlight", cau_hinh.den_nen));
-    cau_hinh.den_led = static_cast<gpio_num_t>(cai_dat.GetInt("led", cau_hinh.den_led));
-    cau_hinh.nut_khoi_dong = static_cast<gpio_num_t>(cai_dat.GetInt("boot", cau_hinh.nut_khoi_dong));
-    cau_hinh.nut_cam_ung = static_cast<gpio_num_t>(cai_dat.GetInt("touch", cau_hinh.nut_cam_ung));
-    cau_hinh.nut_tang_am_luong = static_cast<gpio_num_t>(cai_dat.GetInt("volume_up", cau_hinh.nut_tang_am_luong));
-    cau_hinh.nut_giam_am_luong = static_cast<gpio_num_t>(cai_dat.GetInt("volume_down", cau_hinh.nut_giam_am_luong));
-    cau_hinh.den_lamp = static_cast<gpio_num_t>(cai_dat.GetInt("lamp", cau_hinh.den_lamp));
+#ifdef CONFIG_ENABLE_GPIO_WEB_CONFIG
+    int so_lan_loi = 0;
+#endif
+    {
+        Settings cai_dat(NAMESPACE_GPIO, true);
+        cau_hinh.man_hinh_mosi =
+            static_cast<gpio_num_t>(cai_dat.GetInt("mosi", cau_hinh.man_hinh_mosi));
+        cau_hinh.man_hinh_clk =
+            static_cast<gpio_num_t>(cai_dat.GetInt("clk", cau_hinh.man_hinh_clk));
+        cau_hinh.man_hinh_dc = static_cast<gpio_num_t>(cai_dat.GetInt("dc", cau_hinh.man_hinh_dc));
+        cau_hinh.man_hinh_rst =
+            static_cast<gpio_num_t>(cai_dat.GetInt("rst", cau_hinh.man_hinh_rst));
+        cau_hinh.man_hinh_cs = static_cast<gpio_num_t>(cai_dat.GetInt("cs", cau_hinh.man_hinh_cs));
+        cau_hinh.den_nen = static_cast<gpio_num_t>(cai_dat.GetInt("backlight", cau_hinh.den_nen));
+        cau_hinh.den_led = static_cast<gpio_num_t>(cai_dat.GetInt("led", cau_hinh.den_led));
+        cau_hinh.nut_khoi_dong =
+            static_cast<gpio_num_t>(cai_dat.GetInt("boot", cau_hinh.nut_khoi_dong));
+        cau_hinh.nut_cam_ung =
+            static_cast<gpio_num_t>(cai_dat.GetInt("touch", cau_hinh.nut_cam_ung));
+        cau_hinh.nut_tang_am_luong =
+            static_cast<gpio_num_t>(cai_dat.GetInt("volume_up", cau_hinh.nut_tang_am_luong));
+        cau_hinh.nut_giam_am_luong =
+            static_cast<gpio_num_t>(cai_dat.GetInt("volume_down", cau_hinh.nut_giam_am_luong));
+        cau_hinh.den_lamp = static_cast<gpio_num_t>(cai_dat.GetInt("lamp", cau_hinh.den_lamp));
 #ifdef AUDIO_I2S_METHOD_SIMPLEX
-    cau_hinh.mic_ws = static_cast<gpio_num_t>(cai_dat.GetInt("mic_ws", cau_hinh.mic_ws));
-    cau_hinh.mic_sck = static_cast<gpio_num_t>(cai_dat.GetInt("mic_sck", cau_hinh.mic_sck));
-    cau_hinh.mic_din = static_cast<gpio_num_t>(cai_dat.GetInt("mic_din", cau_hinh.mic_din));
-    cau_hinh.loa_dout = static_cast<gpio_num_t>(cai_dat.GetInt("spk_dout", cau_hinh.loa_dout));
-    cau_hinh.loa_bclk = static_cast<gpio_num_t>(cai_dat.GetInt("spk_bclk", cau_hinh.loa_bclk));
-    cau_hinh.loa_lrck = static_cast<gpio_num_t>(cai_dat.GetInt("spk_lrck", cau_hinh.loa_lrck));
+        cau_hinh.mic_ws = static_cast<gpio_num_t>(cai_dat.GetInt("mic_ws", cau_hinh.mic_ws));
+        cau_hinh.mic_sck = static_cast<gpio_num_t>(cai_dat.GetInt("mic_sck", cau_hinh.mic_sck));
+        cau_hinh.mic_din = static_cast<gpio_num_t>(cai_dat.GetInt("mic_din", cau_hinh.mic_din));
+        cau_hinh.loa_dout = static_cast<gpio_num_t>(cai_dat.GetInt("spk_dout", cau_hinh.loa_dout));
+        cau_hinh.loa_bclk = static_cast<gpio_num_t>(cai_dat.GetInt("spk_bclk", cau_hinh.loa_bclk));
+        cau_hinh.loa_lrck = static_cast<gpio_num_t>(cai_dat.GetInt("spk_lrck", cau_hinh.loa_lrck));
 #else
-    cau_hinh.i2s_ws = static_cast<gpio_num_t>(cai_dat.GetInt("i2s_ws", cau_hinh.i2s_ws));
-    cau_hinh.i2s_bclk = static_cast<gpio_num_t>(cai_dat.GetInt("i2s_bclk", cau_hinh.i2s_bclk));
-    cau_hinh.i2s_din = static_cast<gpio_num_t>(cai_dat.GetInt("i2s_din", cau_hinh.i2s_din));
-    cau_hinh.i2s_dout = static_cast<gpio_num_t>(cai_dat.GetInt("i2s_dout", cau_hinh.i2s_dout));
+        cau_hinh.i2s_ws = static_cast<gpio_num_t>(cai_dat.GetInt("i2s_ws", cau_hinh.i2s_ws));
+        cau_hinh.i2s_bclk = static_cast<gpio_num_t>(cai_dat.GetInt("i2s_bclk", cau_hinh.i2s_bclk));
+        cau_hinh.i2s_din = static_cast<gpio_num_t>(cai_dat.GetInt("i2s_din", cau_hinh.i2s_din));
+        cau_hinh.i2s_dout = static_cast<gpio_num_t>(cai_dat.GetInt("i2s_dout", cau_hinh.i2s_dout));
 #endif
 
-    int so_lan_loi = cai_dat.GetInt(KHOA_SO_LAN_LOI, 0);
-    if (LaLoiKhoiDong(esp_reset_reason())) {
-        ++so_lan_loi;
-        cai_dat.SetInt(KHOA_SO_LAN_LOI, so_lan_loi);
+#ifdef CONFIG_ENABLE_GPIO_WEB_CONFIG
+        so_lan_loi = cai_dat.GetInt(KHOA_SO_LAN_LOI, 0);
+        if (LaLoiKhoiDong(esp_reset_reason())) {
+            ++so_lan_loi;
+            cai_dat.SetInt(KHOA_SO_LAN_LOI, so_lan_loi);
+        }
+#endif
     }
+#ifdef CONFIG_ENABLE_GPIO_WEB_CONFIG
     if (so_lan_loi > 3) {
         ESP_LOGE(TAG, "Khởi động lỗi nhiều lần; khôi phục cấu hình GPIO mặc định");
         cau_hinh = CauHinhGpio{};
         cau_hinh.Luu();
-    } else if (!cau_hinh.KiemTraHopLe()) {
+    }
+#endif
+    if (!cau_hinh.KiemTraHopLe()) {
         ESP_LOGE(TAG, "Cấu hình GPIO không hợp lệ; sử dụng chân mặc định");
         cau_hinh = CauHinhGpio{};
         cau_hinh.Luu();
     }
 
-    if (xTaskCreate(XoaSoLanLoiSauKhiKhoiDongOnDinh, "gpio_boot_ok", 2048, nullptr, 1, nullptr) != pdPASS) {
+#ifdef CONFIG_ENABLE_GPIO_WEB_CONFIG
+    if (xTaskCreate(XoaSoLanLoiSauKhiKhoiDongOnDinh, "gpio_boot_ok", 2048, nullptr, 1, nullptr) !=
+        pdPASS) {
         ESP_LOGW(TAG, "Không thể tạo tác vụ theo dõi khởi động GPIO");
     }
+#endif
     return cau_hinh;
 }
 
@@ -128,8 +149,7 @@ bool CauHinhGpio::KiemTraHopLe() const {
             if (chan.tuy_chon) continue;
             return false;
         }
-        if (chan.so < GPIO_NUM_0 || chan.so >= SOC_GPIO_PIN_COUNT ||
-            !GPIO_IS_VALID_GPIO(chan.so) ||
+        if (chan.so < GPIO_NUM_0 || chan.so >= SOC_GPIO_PIN_COUNT || !GPIO_IS_VALID_GPIO(chan.so) ||
             (chan.dau_ra && !GPIO_IS_VALID_OUTPUT_GPIO(chan.so))) {
             ESP_LOGW(TAG, "GPIO %s không hợp lệ: %d", chan.ten, chan.so);
             return false;
@@ -183,6 +203,4 @@ void CauHinhGpio::Luu() const {
     cai_dat.SetInt(KHOA_SO_LAN_LOI, 0);
 }
 
-void CauHinhGpio::KhoiPhucMacDinh() {
-    CauHinhGpio{}.Luu();
-}
+void CauHinhGpio::KhoiPhucMacDinh() { CauHinhGpio{}.Luu(); }

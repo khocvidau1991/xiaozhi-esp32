@@ -14,7 +14,7 @@ Các tùy chọn `CONFIG_LCD_MODERN_UI`, `CONFIG_LANGUAGE_VI_VN` và `CONFIG_ENA
 - Sau khi thiết bị kết nối Wi-Fi, mở `http://<địa-chỉ-IP-thiết-bị>/gpio` trên cùng mạng nội bộ (cổng 80).
 - `GET /api/gpio` đọc cấu hình JSON; `POST /api/gpio` lưu cấu hình. Nút **Lưu** sẽ khởi động lại thiết bị để áp dụng.
 - Nút **Khôi phục mặc định** đặt lại toàn bộ chân GPIO và khởi động lại. Giá trị `-1` tắt các chân tùy chọn như đèn nền, LED, đèn và các nút không sử dụng.
-- Chọn sai chân có thể khiến thiết bị không khởi động. Sau hơn ba lần khởi động liên tiếp kết thúc do panic/watchdog/brownout, thiết bị tự xóa cấu hình tùy chỉnh và dùng chân mặc định.
+- Khi bật cấu hình GPIO qua web, chọn sai chân có thể khiến thiết bị không khởi động. Sau hơn ba lần khởi động liên tiếp kết thúc do panic/watchdog, thiết bị tự khôi phục chân mặc định.
 
 ## Sơ đồ chân mặc định
 

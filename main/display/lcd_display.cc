@@ -699,7 +699,7 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
 
     // Set alignment and style based on message role
     if (strcmp(role, "user") == 0) {
-        // User messages are right-aligned with green background
+        // Tin nhắn của người dùng được căn phải.
         lv_obj_set_style_bg_color(msg_bubble, lvgl_theme->user_bubble_color(), 0);
 #if CONFIG_LCD_MODERN_UI
         lv_obj_set_style_bg_opa(msg_bubble, LV_OPA_COVER, 0);
