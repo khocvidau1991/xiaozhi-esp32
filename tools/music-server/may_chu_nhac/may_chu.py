@@ -113,7 +113,8 @@ def tao_ung_dung(cau_hinh: Optional[CauHinh] = None) -> FastAPI:
             dang_nhap_web = request.url.path in ("/", "/static/index.html")
             if not dang_nhap_web and not hmac.compare_digest(khoa.encode(), cau_hinh.api_key.encode()):
                 return loi_json(401, "Khóa API không hợp lệ hoặc bị thiếu")
-        if cau_hinh.gioi_han_moi_phut > 0 and request.url.path != "/health":
+        if (cau_hinh.gioi_han_moi_phut > 0 and request.url.path != "/health"
+                and not request.url.path.startswith("/stream/")):
             bay_gio = time.monotonic()
             hang = lich_su_yeu_cau[ip or "?"]
             while hang and bay_gio - hang[0] > 60:

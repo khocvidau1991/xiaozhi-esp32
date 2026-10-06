@@ -65,7 +65,9 @@ std::string MayChuNhac::MoTaMayChu() {
 }
 
 bool MayChuNhac::TimBangMdns(std::string& host, int& port) {
+    static std::mutex mutex_mdns;
     static bool da_khoi_tao = false;
+    std::lock_guard<std::mutex> khoa_mdns(mutex_mdns);
     if (!da_khoi_tao) {
         esp_err_t loi = mdns_init();
         if (loi != ESP_OK && loi != ESP_ERR_INVALID_STATE) {

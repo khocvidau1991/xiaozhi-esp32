@@ -140,7 +140,12 @@ class ThuVien:
         return bool(_TEN_DANH_SACH_HOP_LE.match(ten or "")) and ten.strip() == ten
 
     def _tep_danh_sach(self, ten: str) -> Path:
-        return self.thu_muc_danh_sach / f"{ten}.json"
+        if not self.ten_hop_le(ten):
+            raise ValueError("Tên danh sách phát không hợp lệ")
+        duong_dan = (self.thu_muc_danh_sach / f"{ten}.json").resolve()
+        if duong_dan.parent != self.thu_muc_danh_sach.resolve():
+            raise ValueError("Tên danh sách phát không hợp lệ")
+        return duong_dan
 
     def ds_phat_tat_ca(self) -> List[dict]:
         ket_qua = []
@@ -152,8 +157,8 @@ class ThuVien:
         return ket_qua
 
     def _doc_ds_phat(self, ten: str) -> Optional[List[int]]:
-        tep = self._tep_danh_sach(ten)
         try:
+            tep = self._tep_danh_sach(ten)
             du_lieu = json.loads(tep.read_text(encoding="utf-8"))
             return [int(x) for x in du_lieu.get("bai_hat", [])]
         except (OSError, ValueError, AttributeError, TypeError):

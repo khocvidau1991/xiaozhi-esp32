@@ -40,7 +40,9 @@ Cài đặt và chạy máy chủ: xem [`tools/music-server/README.md`](../tools
 - Khi AI vừa gọi công cụ, nhạc bắt đầu sau khi thiết bị về trạng thái rảnh (tối đa 20 giây).
 - Tên bài/nghệ sĩ hiển thị bằng `Display::SetChatMessage`.
 
-Chưa hỗ trợ: tự giảm âm lượng khi AI nói (ducking) và tắt xử lý giọng nói khi phát nhạc là hành vi sẵn có của trạng thái Notifying.
+Lưu ý: khi phát nhạc thiết bị ở trạng thái Notifying nên xử lý giọng nói bị tắt (chỉ còn từ khóa đánh thức); tính năng tự giảm âm lượng khi AI nói (ducking) chưa được hỗ trợ.
+
+Kiểm chứng: máy chủ nhạc có kiểm thử `pytest`; phần firmware chưa được biên dịch bằng `idf.py` hay thử trên phần cứng trong môi trường này.
 
 ## Ví dụ câu nói
 
