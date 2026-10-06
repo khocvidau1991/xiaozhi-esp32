@@ -29,11 +29,33 @@ protected:
     std::unique_ptr<LvglGif> gif_controller_ = nullptr;
     lv_obj_t* emoji_box_ = nullptr;
     lv_obj_t* chat_message_label_ = nullptr;
+    lv_obj_t* menu_overlay_ = nullptr;
+    lv_obj_t* menu_items_[6] = {};
+    lv_obj_t* avatar_root_ = nullptr;
+    lv_obj_t* avatar_face_ = nullptr;
+    lv_obj_t* avatar_eye_left_ = nullptr;
+    lv_obj_t* avatar_eye_right_ = nullptr;
+    lv_obj_t* avatar_mouth_ = nullptr;
+    lv_obj_t* avatar_arm_left_ = nullptr;
+    lv_obj_t* avatar_arm_right_ = nullptr;
+    lv_obj_t* avatar_leg_left_ = nullptr;
+    lv_obj_t* avatar_leg_right_ = nullptr;
+    lv_timer_t* avatar_timer_ = nullptr;
+    uint8_t menu_selection_ = 0;
+    int16_t avatar_x_ = 0;
+    int8_t avatar_step_ = 1;
+    uint8_t avatar_turn_ = 0;
+    uint8_t avatar_mood_ = 0;
+    uint8_t avatar_mood_ticks_ = 0;
+    bool menu_visible_ = false;
+    bool avatar_idle_visible_ = true;
     esp_timer_handle_t preview_timer_ = nullptr;
     std::unique_ptr<LvglImage> preview_image_cached_ = nullptr;
     bool hide_subtitle_ = false;  // Control whether to hide chat messages/subtitles
 
     void InitializeLcdThemes();
+    void InitializeMenuAndAvatar();
+    void UpdateIdleAvatar(lv_timer_t* timer);
     virtual bool Lock(int timeout_ms = 0) override;
     virtual void Unlock() override;
 
@@ -54,6 +76,11 @@ public:
 
     // Set whether to hide chat messages/subtitles
     virtual void SetHideSubtitle(bool hide) override;
+    void ShowMenu();
+    void HideMenu();
+    void MoveMenuSelection();
+    int SelectMenuItem();
+    bool IsMenuVisible() const { return menu_visible_; }
 };
 
 // SPI LCD display

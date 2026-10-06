@@ -30,3 +30,9 @@ Các tùy chọn `CONFIG_LCD_MODERN_UI`, `CONFIG_LANGUAGE_VI_VN` và `CONFIG_ENA
 | Nút cảm ứng / tăng âm lượng / giảm âm lượng | Không dùng |
 
 GPIO 0 và 45 là chân strapping; thay đổi chúng có thể ảnh hưởng quá trình khởi động. GPIO 26–37 được từ chối vì có thể dành cho flash/PSRAM trên ESP32-S3.
+
+## Menu và nhân vật chờ
+
+Trên biến thể 240 × 240, nhấn giữ nút BOOT để mở menu. Khi menu mở, nhấn một lần để chuyển mục, nhấn đúp để chọn và nhấn giữ để thoát. Menu cung cấp trò chuyện, thiết lập Wi-Fi, âm lượng, đường dẫn cấu hình GPIO web, thông tin thiết bị và khởi động lại. Đây là các chức năng phần mềm sẵn có trên board; không có mục điều khiển camera hay cảm biến vì board này không khai báo các thiết bị đó.
+
+Màn hình chờ dùng nhân vật vector đơn giản dựng trực tiếp bằng LVGL: đi qua lại trên màn hình, đổi hướng ở hai đầu và luân phiên một số nét mặt. Cách dựng này không dùng ảnh động/GIF, giảm dữ liệu flash và bộ nhớ ảnh; đây là hoạt ảnh 2D cách điệu với bốn hướng gần đúng, không phải mô hình 3D dựng thời gian thực hay bộ nhân vật 3D độ phân giải cao.

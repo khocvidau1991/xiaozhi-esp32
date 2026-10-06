@@ -17,6 +17,7 @@
 #endif
 
 #include <esp_log.h>
+#include <esp_system.h>
 #include <driver/i2c_master.h>
 #include <esp_lcd_panel_vendor.h>
 #include <esp_lcd_panel_io.h>
@@ -149,12 +150,69 @@ private:
 
     void InitializeButtons() {
         boot_button_.OnClick([this]() {
+            if (display_->IsMenuVisible()) {
+                display_->MoveMenuSelection();
+                return;
+            }
             auto& app = Application::GetInstance();
             if (app.GetDeviceState() == kDeviceStateStarting) {
                 EnterWifiConfigMode();
                 return;
             }
             app.ToggleChatState();
+        });
+        boot_button_.OnDoubleClick([this]() {
+            if (Application::GetInstance().GetDeviceState() == kDeviceStateStarting) {
+                EnterWifiConfigMode();
+                return;
+            }
+            if (!display_->IsMenuVisible()) {
+                display_->ShowMenu();
+                return;
+            }
+
+            switch (display_->SelectMenuItem()) {
+                case 0:
+                    Application::GetInstance().ToggleChatState();
+                    break;
+                case 1:
+                    EnterWifiConfigMode();
+                    break;
+                case 2: {
+                    auto codec = GetAudioCodec();
+                    int volume = codec->output_volume() + 10;
+                    if (volume > 100) {
+                        volume = 20;
+                    }
+                    codec->SetOutputVolume(volume);
+                    display_->ShowNotification("Âm lượng: " + std::to_string(volume) + "%");
+                    break;
+                }
+                case 3:
+#ifdef CONFIG_ENABLE_GPIO_WEB_CONFIG
+                    display_->ShowNotification("Mở /gpio tại địa chỉ IP thiết bị; AP dùng cổng 8080.");
+#else
+                    display_->ShowNotification("Cấu hình GPIO web chưa được bật.");
+#endif
+                    break;
+                case 4:
+                    display_->ShowNotification("ESP32-S3 • LCD 240 × 240");
+                    break;
+                case 5:
+                    esp_restart();
+                    break;
+                default:
+                    break;
+            }
+        });
+        boot_button_.OnLongPress([this]() {
+            if (Application::GetInstance().GetDeviceState() == kDeviceStateStarting) {
+                EnterWifiConfigMode();
+            } else if (display_->IsMenuVisible()) {
+                display_->HideMenu();
+            } else {
+                display_->ShowMenu();
+            }
         });
     }
 

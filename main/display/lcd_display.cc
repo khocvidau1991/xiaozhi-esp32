@@ -348,6 +348,11 @@ MipiLcdDisplay::MipiLcdDisplay(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel
 LcdDisplay::~LcdDisplay() {
     SetPreviewImage(nullptr);
 
+    if (avatar_timer_ != nullptr) {
+        lv_timer_delete(avatar_timer_);
+        avatar_timer_ = nullptr;
+    }
+
     // Clean up GIF controller
     if (gif_controller_) {
         gif_controller_->Stop();
@@ -361,6 +366,12 @@ LcdDisplay::~LcdDisplay() {
 
     if (preview_image_ != nullptr) {
         lv_obj_del(preview_image_);
+    }
+    if (menu_overlay_ != nullptr) {
+        lv_obj_del(menu_overlay_);
+    }
+    if (avatar_root_ != nullptr) {
+        lv_obj_del(avatar_root_);
     }
     if (chat_message_label_ != nullptr) {
         lv_obj_del(chat_message_label_);
@@ -407,6 +418,298 @@ LcdDisplay::~LcdDisplay() {
 bool LcdDisplay::Lock(int timeout_ms) { return lvgl_port_lock(timeout_ms); }
 
 void LcdDisplay::Unlock() { lvgl_port_unlock(); }
+
+void LcdDisplay::InitializeMenuAndAvatar() {
+#if CONFIG_LCD_MODERN_UI
+    if (LV_HOR_RES != 240 || LV_VER_RES != 240) {
+        return;
+    }
+
+    auto screen = lv_screen_active();
+    auto theme = static_cast<LvglTheme*>(current_theme_);
+    auto text_font = theme->text_font()->font();
+
+    avatar_root_ = lv_obj_create(screen);
+    lv_obj_set_size(avatar_root_, 58, 112);
+    lv_obj_set_style_bg_opa(avatar_root_, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(avatar_root_, 0, 0);
+    lv_obj_set_style_pad_all(avatar_root_, 0, 0);
+    avatar_x_ = (LV_HOR_RES - 58) / 2;
+    lv_obj_set_pos(avatar_root_, avatar_x_, 86);
+
+    auto hair = lv_obj_create(avatar_root_);
+    lv_obj_set_size(hair, 40, 45);
+    lv_obj_align(hair, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_set_style_radius(hair, 18, 0);
+    lv_obj_set_style_bg_color(hair, lv_color_hex(0x382821), 0);
+    lv_obj_set_style_border_width(hair, 0, 0);
+    lv_obj_set_style_pad_all(hair, 0, 0);
+
+    avatar_face_ = lv_obj_create(avatar_root_);
+    lv_obj_set_size(avatar_face_, 30, 34);
+    lv_obj_align(avatar_face_, LV_ALIGN_TOP_MID, 0, 6);
+    lv_obj_set_style_radius(avatar_face_, 14, 0);
+    lv_obj_set_style_bg_color(avatar_face_, lv_color_hex(0xF2C9A8), 0);
+    lv_obj_set_style_border_width(avatar_face_, 0, 0);
+    lv_obj_set_style_pad_all(avatar_face_, 0, 0);
+
+    avatar_eye_left_ = lv_obj_create(avatar_face_);
+    lv_obj_set_size(avatar_eye_left_, 4, 4);
+    lv_obj_set_pos(avatar_eye_left_, 7, 12);
+    lv_obj_set_style_radius(avatar_eye_left_, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(avatar_eye_left_, lv_color_hex(0x30252A), 0);
+    lv_obj_set_style_border_width(avatar_eye_left_, 0, 0);
+    lv_obj_set_style_pad_all(avatar_eye_left_, 0, 0);
+
+    avatar_eye_right_ = lv_obj_create(avatar_face_);
+    lv_obj_set_size(avatar_eye_right_, 4, 4);
+    lv_obj_set_pos(avatar_eye_right_, 19, 12);
+    lv_obj_set_style_radius(avatar_eye_right_, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(avatar_eye_right_, lv_color_hex(0x30252A), 0);
+    lv_obj_set_style_border_width(avatar_eye_right_, 0, 0);
+    lv_obj_set_style_pad_all(avatar_eye_right_, 0, 0);
+
+    avatar_mouth_ = lv_obj_create(avatar_face_);
+    lv_obj_set_size(avatar_mouth_, 7, 3);
+    lv_obj_set_pos(avatar_mouth_, 12, 24);
+    lv_obj_set_style_radius(avatar_mouth_, 2, 0);
+    lv_obj_set_style_bg_color(avatar_mouth_, lv_color_hex(0xB65E69), 0);
+    lv_obj_set_style_border_width(avatar_mouth_, 0, 0);
+    lv_obj_set_style_pad_all(avatar_mouth_, 0, 0);
+
+    auto body = lv_obj_create(avatar_root_);
+    lv_obj_set_size(body, 38, 39);
+    lv_obj_align(body, LV_ALIGN_TOP_MID, 0, 39);
+    lv_obj_set_style_radius(body, 14, 0);
+    lv_obj_set_style_bg_color(body, lv_color_hex(0x6576C8), 0);
+    lv_obj_set_style_border_width(body, 0, 0);
+    lv_obj_set_style_pad_all(body, 0, 0);
+
+    avatar_arm_left_ = lv_obj_create(avatar_root_);
+    lv_obj_set_size(avatar_arm_left_, 8, 31);
+    lv_obj_set_pos(avatar_arm_left_, 3, 44);
+    lv_obj_set_style_radius(avatar_arm_left_, 4, 0);
+    lv_obj_set_style_bg_color(avatar_arm_left_, lv_color_hex(0x6576C8), 0);
+    lv_obj_set_style_border_width(avatar_arm_left_, 0, 0);
+    lv_obj_set_style_pad_all(avatar_arm_left_, 0, 0);
+
+    avatar_arm_right_ = lv_obj_create(avatar_root_);
+    lv_obj_set_size(avatar_arm_right_, 8, 31);
+    lv_obj_set_pos(avatar_arm_right_, 47, 44);
+    lv_obj_set_style_radius(avatar_arm_right_, 4, 0);
+    lv_obj_set_style_bg_color(avatar_arm_right_, lv_color_hex(0x6576C8), 0);
+    lv_obj_set_style_border_width(avatar_arm_right_, 0, 0);
+    lv_obj_set_style_pad_all(avatar_arm_right_, 0, 0);
+
+    avatar_leg_left_ = lv_obj_create(avatar_root_);
+    lv_obj_set_size(avatar_leg_left_, 9, 27);
+    lv_obj_set_pos(avatar_leg_left_, 17, 78);
+    lv_obj_set_style_radius(avatar_leg_left_, 4, 0);
+    lv_obj_set_style_bg_color(avatar_leg_left_, lv_color_hex(0x303952), 0);
+    lv_obj_set_style_border_width(avatar_leg_left_, 0, 0);
+    lv_obj_set_style_pad_all(avatar_leg_left_, 0, 0);
+
+    avatar_leg_right_ = lv_obj_create(avatar_root_);
+    lv_obj_set_size(avatar_leg_right_, 9, 27);
+    lv_obj_set_pos(avatar_leg_right_, 32, 78);
+    lv_obj_set_style_radius(avatar_leg_right_, 4, 0);
+    lv_obj_set_style_bg_color(avatar_leg_right_, lv_color_hex(0x303952), 0);
+    lv_obj_set_style_border_width(0, 0, 0);
+    lv_obj_set_style_pad_all(avatar_leg_right_, 0, 0);
+
+    lv_obj_add_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(emoji_label_, LV_OBJ_FLAG_HIDDEN);
+
+    menu_overlay_ = lv_obj_create(screen);
+    lv_obj_set_size(menu_overlay_, 224, 228);
+    lv_obj_center(menu_overlay_);
+    lv_obj_set_style_radius(menu_overlay_, 18, 0);
+    lv_obj_set_style_bg_color(menu_overlay_, theme->background_color(), 0);
+    lv_obj_set_style_bg_opa(menu_overlay_, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(menu_overlay_, 1, 0);
+    lv_obj_set_style_border_color(menu_overlay_, theme->border_color(), 0);
+    lv_obj_set_style_pad_all(menu_overlay_, 8, 0);
+    lv_obj_set_style_pad_row(menu_overlay_, 2, 0);
+    lv_obj_set_flex_flow(menu_overlay_, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_scrollbar_mode(menu_overlay_, LV_SCROLLBAR_MODE_OFF);
+
+    auto title = lv_label_create(menu_overlay_);
+    lv_label_set_text(title, "Chức năng");
+    lv_obj_set_style_text_font(title, text_font, 0);
+    lv_obj_set_style_text_color(title, theme->text_color(), 0);
+    lv_obj_set_width(title, LV_PCT(100));
+
+    static const char* labels[] = {
+        "Trò chuyện", "Thiết lập Wi-Fi", "Âm lượng", "Cấu hình GPIO web",
+        "Thông tin thiết bị", "Khởi động lại"
+    };
+    for (size_t i = 0; i < 6; ++i) {
+        menu_items_[i] = lv_obj_create(menu_overlay_);
+        lv_obj_set_size(menu_items_[i], LV_PCT(100), 25);
+        lv_obj_set_style_radius(menu_items_[i], 8, 0);
+        lv_obj_set_style_border_width(menu_items_[i], 0, 0);
+        lv_obj_set_style_pad_left(menu_items_[i], 8, 0);
+        lv_obj_set_style_pad_right(menu_items_[i], 4, 0);
+        lv_obj_set_style_pad_top(menu_items_[i], 3, 0);
+        lv_obj_set_style_pad_bottom(menu_items_[i], 3, 0);
+        lv_obj_set_style_bg_opa(menu_items_[i], LV_OPA_TRANSP, 0);
+        lv_obj_clear_flag(menu_items_[i], LV_OBJ_FLAG_SCROLLABLE);
+        auto label = lv_label_create(menu_items_[i]);
+        lv_label_set_text(label, labels[i]);
+        lv_obj_set_style_text_font(label, text_font, 0);
+        lv_obj_set_style_text_color(label, theme->text_color(), 0);
+        lv_obj_center(label);
+    }
+
+    auto hint = lv_label_create(menu_overlay_);
+    lv_label_set_text(hint, "Nhấn: tiếp • Đúp: chọn • Giữ: thoát");
+    lv_obj_set_style_text_font(hint, text_font, 0);
+    lv_obj_set_style_text_color(hint, theme->text_color(), 0);
+    lv_obj_set_width(hint, LV_PCT(100));
+    lv_obj_set_style_text_align(hint, LV_TEXT_ALIGN_CENTER, 0);
+
+    menu_visible_ = false;
+    lv_obj_add_flag(menu_overlay_, LV_OBJ_FLAG_HIDDEN);
+    avatar_timer_ = lv_timer_create(
+        [](lv_timer_t* timer) {
+            auto* display = static_cast<LcdDisplay*>(lv_timer_get_user_data(timer));
+            display->UpdateIdleAvatar(timer);
+        },
+        120, this);
+
+    auto update_menu = [this, theme]() {
+        for (size_t i = 0; i < 6; ++i) {
+            const bool selected = i == menu_selection_;
+            lv_obj_set_style_bg_opa(menu_items_[i], selected ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
+            lv_obj_set_style_bg_color(menu_items_[i],
+                                      selected ? theme->user_bubble_color()
+                                               : theme->background_color(),
+                                      0);
+            auto label = lv_obj_get_child(menu_items_[i], 0);
+            lv_obj_set_style_text_color(label,
+                                        selected ? lv_color_white() : theme->text_color(), 0);
+        }
+    };
+    update_menu();
+    lv_obj_move_foreground(menu_overlay_);
+#endif
+}
+
+void LcdDisplay::UpdateIdleAvatar(lv_timer_t* timer) {
+    (void)timer;
+#if CONFIG_LCD_MODERN_UI
+    if (avatar_root_ == nullptr || menu_visible_) {
+        return;
+    }
+
+    const int max_x = LV_HOR_RES - 64;
+    avatar_x_ += avatar_step_ * 2;
+    if (avatar_x_ <= 4 || avatar_x_ >= max_x) {
+        avatar_x_ = std::max(4, std::min(avatar_x_, max_x));
+        avatar_step_ = -avatar_step_;
+        avatar_turn_ = (avatar_turn_ + 1) % 4;
+        const bool back_view = avatar_turn_ == 2;
+        const bool side_view = avatar_turn_ == 1 || avatar_turn_ == 3;
+        if (back_view) {
+            lv_obj_add_flag(avatar_face_, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_remove_flag(avatar_face_, LV_OBJ_FLAG_HIDDEN);
+            if (side_view) {
+                lv_obj_add_flag(avatar_eye_right_, LV_OBJ_FLAG_HIDDEN);
+            } else {
+                lv_obj_remove_flag(avatar_eye_right_, LV_OBJ_FLAG_HIDDEN);
+            }
+        }
+    }
+
+    lv_obj_set_pos(avatar_root_, avatar_x_, 84 + ((avatar_x_ / 2) % 2));
+    const int swing = avatar_step_ * ((avatar_x_ / 4) % 2 ? 100 : -100);
+    lv_obj_set_style_transform_rotation(avatar_arm_left_, swing, 0);
+    lv_obj_set_style_transform_rotation(avatar_arm_right_, -swing, 0);
+    lv_obj_set_style_transform_rotation(avatar_leg_left_, -swing, 0);
+    lv_obj_set_style_transform_rotation(avatar_leg_right_, swing, 0);
+    if (++avatar_mood_ticks_ >= 48) {
+        avatar_mood_ticks_ = 0;
+        avatar_mood_ = (avatar_mood_ + 1) % 4;
+        const bool sleepy = avatar_mood_ == 2;
+        const bool surprised = avatar_mood_ == 1;
+        const bool curious = avatar_mood_ == 3;
+        lv_obj_set_size(avatar_eye_left_, 4, sleepy ? 2 : (surprised ? 6 : 4));
+        lv_obj_set_size(avatar_eye_right_, 4, sleepy ? 2 : (surprised ? 6 : 4));
+        lv_obj_set_size(avatar_mouth_, curious ? 4 : (sleepy ? 4 : 7),
+                        surprised ? 5 : (sleepy ? 4 : 3));
+        lv_obj_set_pos(avatar_mouth_, curious ? 13 : (sleepy ? 13 : 12),
+                       surprised ? 22 : (sleepy ? 23 : 24));
+    }
+#endif
+}
+
+void LcdDisplay::ShowMenu() {
+#if CONFIG_LCD_MODERN_UI
+    if (menu_overlay_ == nullptr) {
+        return;
+    }
+    DisplayLockGuard lock(this);
+    menu_visible_ = true;
+    if (avatar_timer_ != nullptr) {
+        lv_timer_pause(avatar_timer_);
+    }
+    lv_obj_add_flag(avatar_root_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(menu_overlay_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(menu_overlay_);
+#endif
+}
+
+void LcdDisplay::HideMenu() {
+#if CONFIG_LCD_MODERN_UI
+    if (menu_overlay_ == nullptr) {
+        return;
+    }
+    DisplayLockGuard lock(this);
+    menu_visible_ = false;
+    lv_obj_add_flag(menu_overlay_, LV_OBJ_FLAG_HIDDEN);
+    if (avatar_root_ != nullptr && avatar_idle_visible_) {
+        lv_obj_clear_flag(avatar_root_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (avatar_timer_ != nullptr && avatar_idle_visible_) {
+        lv_timer_resume(avatar_timer_);
+    }
+#endif
+}
+
+void LcdDisplay::MoveMenuSelection() {
+#if CONFIG_LCD_MODERN_UI
+    if (!menu_visible_ || menu_overlay_ == nullptr) {
+        return;
+    }
+    DisplayLockGuard lock(this);
+    menu_selection_ = (menu_selection_ + 1) % 6;
+    auto theme = static_cast<LvglTheme*>(current_theme_);
+    for (size_t i = 0; i < 6; ++i) {
+        const bool selected = i == menu_selection_;
+        lv_obj_set_style_bg_opa(menu_items_[i], selected ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
+        lv_obj_set_style_bg_color(menu_items_[i],
+                                  selected ? theme->user_bubble_color()
+                                           : theme->background_color(),
+                                  0);
+        lv_obj_set_style_text_color(lv_obj_get_child(menu_items_[i], 0),
+                                    selected ? lv_color_white() : theme->text_color(), 0);
+    }
+#endif
+}
+
+int LcdDisplay::SelectMenuItem() {
+#if CONFIG_LCD_MODERN_UI
+    if (!menu_visible_) {
+        return -1;
+    }
+    const int selected = menu_selection_;
+    HideMenu();
+    return selected;
+#else
+    return -1;
+#endif
+}
 
 #if CONFIG_USE_WECHAT_MESSAGE_STYLE
 void LcdDisplay::SetupUI() {
@@ -572,6 +875,7 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_text_font(emoji_label_, large_icon_font, 0);
     lv_obj_set_style_text_color(emoji_label_, lvgl_theme->text_color(), 0);
     lv_label_set_text(emoji_label_, MATERIAL_SYMBOLS_ROBOT_2);
+    InitializeMenuAndAvatar();
 }
 #if CONFIG_IDF_TARGET_ESP32P4
 #define MAX_MESSAGES 40
@@ -584,6 +888,13 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
                  role, content);
     }
     DisplayLockGuard lock(this);
+    avatar_idle_visible_ = false;
+    if (avatar_root_ != nullptr) {
+        lv_obj_add_flag(avatar_root_, LV_OBJ_FLAG_HIDDEN);
+        if (avatar_timer_ != nullptr) {
+            lv_timer_pause(avatar_timer_);
+        }
+    }
     if (content_ == nullptr) {
         if (setup_ui_called_) {
             ESP_LOGW(TAG,
@@ -912,8 +1223,17 @@ void LcdDisplay::ClearChatMessages() {
     // Reset chat_message_label_ as it has been deleted
     chat_message_label_ = nullptr;
 
-    // Show the centered AI logo (emoji_label_) again
-    if (emoji_label_ != nullptr) {
+    avatar_idle_visible_ = true;
+    if (avatar_root_ != nullptr) {
+        lv_obj_add_flag(emoji_label_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
+        if (!menu_visible_) {
+            lv_obj_clear_flag(avatar_root_, LV_OBJ_FLAG_HIDDEN);
+        }
+        if (avatar_timer_ != nullptr && !menu_visible_) {
+            lv_timer_resume(avatar_timer_);
+        }
+    } else if (emoji_label_ != nullptr) {
         lv_obj_remove_flag(emoji_label_, LV_OBJ_FLAG_HIDDEN);
     }
 
@@ -1158,6 +1478,7 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_text_color(low_battery_label_, lv_color_white(), 0);
     lv_obj_center(low_battery_label_);
     lv_obj_add_flag(low_battery_popup_, LV_OBJ_FLAG_HIDDEN);
+    InitializeMenuAndAvatar();
 }
 
 void LcdDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image) {
@@ -1202,6 +1523,13 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
                  role, content);
     }
     DisplayLockGuard lock(this);
+    avatar_idle_visible_ = false;
+    if (avatar_root_ != nullptr) {
+        lv_obj_add_flag(avatar_root_, LV_OBJ_FLAG_HIDDEN);
+        if (avatar_timer_ != nullptr) {
+            lv_timer_pause(avatar_timer_);
+        }
+    }
     if (chat_message_label_ == nullptr) {
         if (setup_ui_called_) {
             ESP_LOGW(TAG,
@@ -1236,12 +1564,23 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
 
 void LcdDisplay::ClearChatMessages() {
     DisplayLockGuard lock(this);
+    avatar_idle_visible_ = true;
     // In non-wechat mode, just clear the chat message label and hide the bar
     if (chat_message_label_ != nullptr) {
         lv_label_set_text(chat_message_label_, "");
     }
     if (bottom_bar_ != nullptr) {
         lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (avatar_root_ != nullptr) {
+        lv_obj_add_flag(emoji_label_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
+        if (!menu_visible_) {
+            lv_obj_clear_flag(avatar_root_, LV_OBJ_FLAG_HIDDEN);
+            if (avatar_timer_ != nullptr) {
+                lv_timer_resume(avatar_timer_);
+            }
+        }
     }
 }
 #endif
