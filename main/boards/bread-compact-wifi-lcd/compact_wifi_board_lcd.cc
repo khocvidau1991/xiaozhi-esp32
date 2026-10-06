@@ -79,7 +79,7 @@ private:
     void InitializeLcdDisplay() {
         esp_lcd_panel_io_handle_t panel_io = nullptr;
         esp_lcd_panel_handle_t panel = nullptr;
-        // 液晶屏控制IO初始化
+        // Khởi tạo IO điều khiển màn hình LCD
         ESP_LOGD(TAG, "Install panel IO");
         esp_lcd_panel_io_spi_config_t io_config = {};
         io_config.cs_gpio_num = DISPLAY_CS_PIN;
@@ -91,20 +91,23 @@ private:
         io_config.lcd_param_bits = 8;
         ESP_ERROR_CHECK(esp_lcd_new_panel_io_spi(SPI3_HOST, &io_config, &panel_io));
 
-        // 初始化液晶屏驱动芯片
+        // Khởi tạo chip điều khiển màn hình LCD
         ESP_LOGD(TAG, "Install LCD driver");
         esp_lcd_panel_dev_config_t panel_config = {};
         panel_config.reset_gpio_num = DISPLAY_RST_PIN;
         panel_config.rgb_ele_order = DISPLAY_RGB_ORDER;
         panel_config.bits_per_pixel = 16;
+#if defined(LCD_TYPE_GC9A01_SERIAL)
+        gc9a01_vendor_config_t gc9107_vendor_config = {
+            .init_cmds = gc9107_lcd_init_cmds,
+            .init_cmds_size = sizeof(gc9107_lcd_init_cmds) / sizeof(gc9a01_lcd_init_cmd_t),
+        };
+        panel_config.vendor_config = &gc9107_vendor_config;  // Phải gán TRƯỚC khi tạo panel
+#endif
 #if defined(LCD_TYPE_ILI9341_SERIAL)
         ESP_ERROR_CHECK(esp_lcd_new_panel_ili9341(panel_io, &panel_config, &panel));
 #elif defined(LCD_TYPE_GC9A01_SERIAL)
         ESP_ERROR_CHECK(esp_lcd_new_panel_gc9a01(panel_io, &panel_config, &panel));
-        gc9a01_vendor_config_t gc9107_vendor_config = {
-            .init_cmds = gc9107_lcd_init_cmds,
-            .init_cmds_size = sizeof(gc9107_lcd_init_cmds) / sizeof(gc9a01_lcd_init_cmd_t),
-        };        
 #else
         ESP_ERROR_CHECK(esp_lcd_new_panel_st7789(panel_io, &panel_config, &panel));
 #endif
@@ -115,9 +118,6 @@ private:
         esp_lcd_panel_invert_color(panel, DISPLAY_INVERT_COLOR);
         esp_lcd_panel_swap_xy(panel, DISPLAY_SWAP_XY);
         esp_lcd_panel_mirror(panel, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y);
-#ifdef  LCD_TYPE_GC9A01_SERIAL
-        panel_config.vendor_config = &gc9107_vendor_config;
-#endif
         display_ = new SpiLcdDisplay(panel_io, panel,
                                     DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
     }
@@ -133,7 +133,7 @@ private:
         });
     }
 
-    // 物联网初始化，添加对 AI 可见设备
+    // Khởi tạo IoT, thêm các thiết bị mà AI có thể nhìn thấy
     void InitializeTools() {
         static LampController lamp(LAMP_GPIO);
     }
