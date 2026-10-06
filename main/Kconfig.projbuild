@@ -893,6 +893,16 @@ config USE_MULTILINE_CHAT_MESSAGE
         When disabled (default), a single-line horizontally scrolling label
         is shown at the bottom of the screen.
 
+config LCD_MODERN_UI
+    bool "Giao diện LCD hiện đại"
+    depends on USE_DEFAULT_MESSAGE_STYLE || USE_WECHAT_MESSAGE_STYLE
+    default n
+    help
+        Bật giao diện LCD hiện đại: bảng màu hiện đại, bong bóng chat bo góc lớn,
+        đổ bóng nhẹ, thanh trạng thái có đường kẻ và phụ đề dạng viên thuốc.
+        Khi tắt (mặc định), giao diện giữ nguyên như cũ.
+        Lưu ý: đổ bóng và gradient tốn RAM/CPU, nên thử trên màn hình 240x320 trước.
+
 choice WAKE_WORD_TYPE
     prompt "Wake Word Implementation Type"
     default USE_AFE_WAKE_WORD if (IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32P4 || IDF_TARGET_ESP32S31) && SPIRAM
