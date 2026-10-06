@@ -64,14 +64,14 @@ esp_err_t SystemInfo::PrintTaskCpuUsage(TickType_t xTicksToWait) {
     esp_err_t ret;
     uint32_t total_elapsed_time;
 
-    //Allocate array to store current task states
+    //Cấp phát mảng để lưu trạng thái các tác vụ hiện tại
     start_array_size = uxTaskGetNumberOfTasks() + ARRAY_SIZE_OFFSET;
     start_array = (TaskStatus_t*)malloc(sizeof(TaskStatus_t) * start_array_size);
     if (start_array == NULL) {
         ret = ESP_ERR_NO_MEM;
         goto exit;
     }
-    //Get current task states
+    //Lấy trạng thái các tác vụ hiện tại
     start_array_size = uxTaskGetSystemState(start_array, start_array_size, &start_run_time);
     if (start_array_size == 0) {
         ret = ESP_ERR_INVALID_SIZE;
@@ -80,21 +80,21 @@ esp_err_t SystemInfo::PrintTaskCpuUsage(TickType_t xTicksToWait) {
 
     vTaskDelay(xTicksToWait);
 
-    //Allocate array to store tasks states post delay
+    //Cấp phát mảng để lưu trạng thái các tác vụ sau khi trì hoãn
     end_array_size = uxTaskGetNumberOfTasks() + ARRAY_SIZE_OFFSET;
     end_array = (TaskStatus_t*)malloc(sizeof(TaskStatus_t) * end_array_size);
     if (end_array == NULL) {
         ret = ESP_ERR_NO_MEM;
         goto exit;
     }
-    //Get post delay task states
+    //Lấy trạng thái các tác vụ sau khi trì hoãn
     end_array_size = uxTaskGetSystemState(end_array, end_array_size, &end_run_time);
     if (end_array_size == 0) {
         ret = ESP_ERR_INVALID_SIZE;
         goto exit;
     }
 
-    //Calculate total_elapsed_time in units of run time stats clock period.
+    //Tính total_elapsed_time theo đơn vị chu kỳ đồng hồ thống kê thời gian chạy.
     total_elapsed_time = (end_run_time - start_run_time);
     if (total_elapsed_time == 0) {
         ret = ESP_ERR_INVALID_STATE;
@@ -102,19 +102,19 @@ esp_err_t SystemInfo::PrintTaskCpuUsage(TickType_t xTicksToWait) {
     }
 
     printf("| Task | Run Time | Percentage\n");
-    //Match each task in start_array to those in the end_array
+    //Khớp từng tác vụ trong start_array với các tác vụ trong end_array
     for (int i = 0; i < start_array_size; i++) {
         int k = -1;
         for (int j = 0; j < end_array_size; j++) {
             if (start_array[i].xHandle == end_array[j].xHandle) {
                 k = j;
-                //Mark that task have been matched by overwriting their handles
+                //Đánh dấu tác vụ đã được khớp bằng cách ghi đè handle của chúng
                 start_array[i].xHandle = NULL;
                 end_array[j].xHandle = NULL;
                 break;
             }
         }
-        //Check if matching task found
+        //Kiểm tra xem có tìm thấy tác vụ khớp không
         if (k >= 0) {
             uint32_t task_elapsed_time = end_array[k].ulRunTimeCounter - start_array[i].ulRunTimeCounter;
             uint32_t percentage_time = (task_elapsed_time * 100UL) / (total_elapsed_time * CONFIG_FREERTOS_NUMBER_OF_CORES);
@@ -122,7 +122,7 @@ esp_err_t SystemInfo::PrintTaskCpuUsage(TickType_t xTicksToWait) {
         }
     }
 
-    //Print unmatched tasks
+    //In các tác vụ không khớp
     for (int i = 0; i < start_array_size; i++) {
         if (start_array[i].xHandle != NULL) {
             printf("| %s | Deleted\n", start_array[i].pcTaskName);

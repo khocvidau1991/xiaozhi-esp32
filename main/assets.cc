@@ -34,7 +34,7 @@ Assets::Assets() {
 #else
     strategy_ = std::make_unique<Assets::EmoteStrategy>();
 #endif
-    // Initialize the partition
+    // Khởi tạo phân vùng
     InitializePartition();
 }
 
@@ -75,8 +75,8 @@ void Assets::UseBuiltInTextFontCapability() {
         .bpp = TEXT_FONT_BPP,
     };
 #else
-    // Emote does not consume pushed glyphs; advertising charset=basic makes
-    // the server embed a bitmap for every CJK character and inflates MQTT.
+    // Emote không dùng các glyph được đẩy xuống; quảng bá charset=basic khiến
+    // máy chủ nhúng bitmap cho mọi ký tự CJK và làm phình MQTT.
     text_font_capability_ = {};
 #endif
 }
@@ -92,7 +92,7 @@ bool Assets::LoadSrmodelsFromIndex(Assets* assets, cJSON* root) {
     size_t size = 0;
     bool need_delete_root = false;
 
-    // If root is not provided, parse index.json
+    // Nếu root không được cung cấp, phân tích index.json
     if (root == nullptr) {
         if (!assets->GetAssetData("index.json", ptr, size)) {
             ESP_LOGE(TAG, "The index.json file is not found");
@@ -154,9 +154,9 @@ bool Assets::LvglStrategy::InitializePartition(Assets* assets) {
         return false;
     }
 
-    // Read the header first so we only mmap the payload in use. On ESP32-C3 the
-    // free MMU data pages can be smaller than a full 1MB assets partition even
-    // when the packed assets.bin itself fits.
+    // Đọc phần tiêu đề trước để chỉ mmap phần dữ liệu đang dùng. Trên ESP32-C3,
+    // số trang dữ liệu MMU trống có thể nhỏ hơn một phân vùng assets 1MB đầy đủ
+    // ngay cả khi assets.bin đã đóng gói vừa vặn.
     uint8_t header[12] = {};
     esp_err_t err = esp_partition_read(assets->partition_, 0, header, sizeof(header));
     if (err != ESP_OK) {
@@ -234,7 +234,7 @@ void Assets::LvglStrategy::UnApplyPartition(Assets* assets) {
     }
     checksum_valid_ = false;
     assets_.clear();
-    (void)assets;  // Unused parameter
+    (void)assets;  // Tham số không dùng
 }
 
 bool Assets::LvglStrategy::GetAssetData(Assets* assets, const std::string& name, void*& ptr,
@@ -419,7 +419,7 @@ bool Assets::LvglStrategy::Apply(Assets* assets, bool refresh_display_theme) {
             display->SetTheme(current_theme);
         }
 
-        // Parse hide_subtitle configuration
+        // Phân tích cấu hình hide_subtitle
         cJSON* hide_subtitle = cJSON_GetObjectItem(root.get(), "hide_subtitle");
         if (cJSON_IsBool(hide_subtitle)) {
             bool hide = cJSON_IsTrue(hide_subtitle);
@@ -454,7 +454,7 @@ void Assets::EmoteStrategy::UnApplyPartition(Assets* assets) {
     if (display != nullptr) {
         display->UnmountAssets();
     }
-    (void)assets;  // Unused parameter
+    (void)assets;  // Tham số không dùng
 }
 
 bool Assets::EmoteStrategy::GetAssetData(Assets* assets, const std::string& name, void*& ptr,
@@ -471,7 +471,7 @@ bool Assets::EmoteStrategy::GetAssetData(Assets* assets, const std::string& name
         ESP_LOGE(TAG, "Failed to get asset data by name: %s", name.c_str());
         return false;
     }
-    (void)assets;  // Unused parameter
+    (void)assets;  // Tham số không dùng
     return false;
 }
 
@@ -540,7 +540,7 @@ bool Assets::Download(std::string url,
         return false;
     }
 
-    // Unapply the partition
+    // Hủy áp dụng phân vùng
     UnApplyPartition();
 
     size_t sectors_to_erase = (content_length + SECTOR_SIZE - 1) / SECTOR_SIZE;
@@ -568,14 +568,14 @@ bool Assets::Download(std::string url,
         int n = *ret;
 
         if (n == 0) {
-            // End of data
+            // Hết dữ liệu
             success = true;
             break;
         }
 
         size_t buf_pos = 0;
 
-        // Collect header
+        // Thu thập phần tiêu đề
         if (header_collected < HEADER_SIZE) {
             size_t need = HEADER_SIZE - header_collected;
             size_t take = std::min(static_cast<size_t>(n), need);
@@ -584,12 +584,12 @@ bool Assets::Download(std::string url,
             buf_pos += take;
         }
 
-        // Write payload
+        // Ghi dữ liệu
         if ((size_t)n > buf_pos) {
             size_t write_len = (size_t)n - buf_pos;
             size_t write_end_offset = HEADER_SIZE + total_written + write_len;
             size_t needed_sectors = (write_end_offset + SECTOR_SIZE - 1) / SECTOR_SIZE;
-            // Erase sectors
+            // Xóa các sector
             bool erase_failed = false;
             while (current_sector < needed_sectors) {
                 size_t sector_start = current_sector * SECTOR_SIZE;
@@ -628,7 +628,7 @@ bool Assets::Download(std::string url,
             recent_written += write_len;
         }
 
-        // Calculate progress
+        // Tính tiến độ
         if (esp_timer_get_time() - last_calc_time >= 1000000 ||
             (header_collected + total_written) == content_length) {
             size_t progress = (header_collected + total_written) * 100 / content_length;
@@ -645,14 +645,14 @@ bool Assets::Download(std::string url,
         }
     }
 
-    // Check if the downloaded size matches the expected size
+    // Kiểm tra kích thước đã tải có khớp với kích thước mong đợi không
     if (success && (header_collected + total_written != content_length)) {
         ESP_LOGE(TAG, "Downloaded size (%u) does not match expected size (%u)",
                  (unsigned int)(header_collected + total_written), (unsigned int)content_length);
         success = false;
     }
 
-    // Write header
+    // Ghi phần tiêu đề
     if (success) {
         esp_err_t err = esp_partition_write(partition_, 0, header_buf, HEADER_SIZE);
         if (err != ESP_OK) {
@@ -671,7 +671,7 @@ bool Assets::Download(std::string url,
              "erased: %u",
              (unsigned int)(header_collected + total_written), (unsigned int)current_sector);
 
-    // Re-initialize the assets partition
+    // Khởi tạo lại phân vùng assets
     if (!InitializePartition()) {
         ESP_LOGE(TAG, "Failed to re-initialize assets partition");
         return false;

@@ -62,13 +62,13 @@ void Application::Initialize() {
     auto& board = Board::GetInstance();
     SetDeviceState(kDeviceStateStarting);
 
-    // Setup the display
+    // Thiết lập màn hình
     auto display = board.GetDisplay();
     display->SetupUI();
-    // Print board name/version info
+    // In thông tin tên/phiên bản của board
     display->SetChatMessage("system", SystemInfo::GetUserAgent().c_str());
 
-    // Setup the audio service
+    // Thiết lập dịch vụ âm thanh
     auto codec = board.GetAudioCodec();
     audio_service_.Initialize(codec);
     audio_service_.Start();
@@ -93,20 +93,20 @@ void Application::Initialize() {
     };
     audio_service_.SetCallbacks(callbacks);
 
-    // Add state change listeners
+    // Thêm các bộ lắng nghe thay đổi trạng thái
     state_machine_.AddStateChangeListener([this](DeviceState old_state, DeviceState new_state) {
         xEventGroupSetBits(event_group_, MAIN_EVENT_STATE_CHANGED);
     });
 
-    // Start the clock timer to update the status bar
+    // Khởi động bộ hẹn giờ đồng hồ để cập nhật thanh trạng thái
     esp_timer_start_periodic(clock_timer_handle_, 1000000);
 
-    // Add MCP common tools (only once during initialization)
+    // Thêm các công cụ MCP chung (chỉ một lần trong quá trình khởi tạo)
     auto& mcp_server = McpServer::GetInstance();
     mcp_server.AddCommonTools();
     mcp_server.AddUserOnlyTools();
 
-    // Set network event callback for UI updates and network state handling
+    // Đặt callback sự kiện mạng để cập nhật UI và xử lý trạng thái mạng
     board.SetNetworkEventCallback([this](NetworkEvent event, const std::string& data) {
         auto display = Board::GetInstance().GetDisplay();
 
@@ -117,10 +117,10 @@ void Application::Initialize() {
                 break;
             case NetworkEvent::Connecting: {
                 if (data.empty()) {
-                    // Cellular network - registering without carrier info yet
+                    // Mạng di động - chưa đăng ký thông tin nhà mạng
                     display->SetStatus(Lang::Strings::REGISTERING_NETWORK);
                 } else {
-                    // WiFi or cellular with carrier info
+                    // WiFi hoặc mạng di động đã có thông tin nhà mạng
                     std::string msg = Lang::Strings::CONNECT_TO;
                     msg += data;
                     msg += "...";
@@ -139,12 +139,12 @@ void Application::Initialize() {
                 xEventGroupSetBits(event_group_, MAIN_EVENT_NETWORK_DISCONNECTED);
                 break;
             case NetworkEvent::WifiConfigModeEnter:
-                // WiFi config mode enter is handled by WifiBoard internally
+                // Việc vào chế độ cấu hình WiFi do WifiBoard tự xử lý bên trong
                 break;
             case NetworkEvent::WifiConfigModeExit:
-                // WiFi config mode exit is handled by WifiBoard internally
+                // Việc thoát chế độ cấu hình WiFi do WifiBoard tự xử lý bên trong
                 break;
-            // Cellular modem specific events
+            // Các sự kiện riêng của modem di động
             case NetworkEvent::ModemDetecting:
                 display->SetStatus(Lang::Strings::DETECTING_MODULE);
                 break;
@@ -166,15 +166,15 @@ void Application::Initialize() {
         }
     });
 
-    // Start network asynchronously
+    // Bắt đầu mạng một cách bất đồng bộ
     board.StartNetwork();
 
-    // Update the status bar immediately to show the network state
+    // Cập nhật thanh trạng thái ngay để hiển thị trạng thái mạng
     display->UpdateStatusBar(true);
 }
 
 void Application::Run() {
-    // Set the priority of the main task to 10
+    // Đặt độ ưu tiên của tác vụ chính là 10
     vTaskPrioritySet(nullptr, 10);
 
     const EventBits_t ALL_EVENTS =
@@ -216,8 +216,8 @@ void Application::Run() {
             if (audio_service_.IsPlaybackIdle()) {
                 notify_player_.OnPlaybackDrained();
             }
-            // Deferred listening start (auto mode): the playback queue has
-            // drained, so it is now safe to enable voice processing.
+            // Bắt đầu lắng nghe trì hoãn (chế độ tự động): hàng đợi phát lại
+            // đã phát hết nên giờ có thể bật xử lý giọng nói an toàn.
             if (pending_listening_start_ && GetDeviceState() == kDeviceStateListening &&
                 audio_service_.IsPlaybackIdle()) {
                 pending_listening_start_ = false;
@@ -240,10 +240,10 @@ void Application::Run() {
         if (bits & MAIN_EVENT_SEND_AUDIO) {
             while (auto packet = audio_service_.PopPacketFromSendQueue()) {
                 if (protocol_ && !protocol_->SendAudio(std::move(packet))) {
-                    // Drop the remaining packets. Leaving them in the queue would
-                    // stall the Opus codec task (it waits for queue space), which in
-                    // turn deadlocks the whole audio input pipeline, as no new
-                    // MAIN_EVENT_SEND_AUDIO event would ever be triggered again.
+                    // Bỏ các gói còn lại. Để chúng trong hàng đợi sẽ
+                    // làm tác vụ codec Opus bị treo (nó chờ chỗ trống trong hàng đợi), từ đó
+                    // gây deadlock toàn bộ luồng đầu vào âm thanh, vì sẽ không còn sự kiện
+                    // MAIN_EVENT_SEND_AUDIO nào được kích hoạt nữa.
                     while (audio_service_.PopPacketFromSendQueue())
                         ;
                     break;
@@ -276,7 +276,7 @@ void Application::Run() {
             auto display = Board::GetInstance().GetDisplay();
             display->UpdateStatusBar();
 
-            // Print debug info every 10 seconds
+            // In thông tin gỡ lỗi mỗi 10 giây
             if (clock_ticks_ % 10 == 0) {
                 SystemInfo::PrintHeapStats();
                 // SystemInfo::PrintTaskList();
@@ -291,7 +291,7 @@ void Application::HandleNetworkConnectedEvent() {
     auto state = GetDeviceState();
 
     if (state == kDeviceStateStarting || state == kDeviceStateWifiConfiguring) {
-        // Network is ready, start activation
+        // Mạng đã sẵn sàng, bắt đầu kích hoạt
         SetDeviceState(kDeviceStateActivating);
         if (activation_task_handle_ != nullptr) {
             ESP_LOGW(TAG, "Activation task already running");
@@ -308,13 +308,13 @@ void Application::HandleNetworkConnectedEvent() {
             "activation", 4096 * 2, this, 2, &activation_task_handle_);
     }
 
-    // Update the status bar immediately to show the network state
+    // Cập nhật thanh trạng thái ngay để hiển thị trạng thái mạng
     auto display = Board::GetInstance().GetDisplay();
     display->UpdateStatusBar(true);
 }
 
 void Application::HandleNetworkDisconnectedEvent() {
-    // Close current conversation when network disconnected
+    // Đóng cuộc hội thoại hiện tại khi mạng bị ngắt
     auto state = GetDeviceState();
     if (state == kDeviceStateNotifying) {
         StopNotification();
@@ -325,7 +325,7 @@ void Application::HandleNetworkDisconnectedEvent() {
         protocol_->CloseAudioChannel();
     }
 
-    // Update the status bar immediately to show the network state
+    // Cập nhật thanh trạng thái ngay để hiển thị trạng thái mạng
     auto display = Board::GetInstance().GetDisplay();
     display->UpdateStatusBar(true);
 }
@@ -338,9 +338,9 @@ void Application::HandleActivationDoneEvent() {
 
     has_server_time_ = ota_->HasServerTime();
 
-    // Protocol start may have already raised MAIN_EVENT_ERROR. Do not replace
-    // that alert with the "ready" UI/sound — the main loop can process both
-    // events back-to-back because the activation task is lower priority.
+    // Việc khởi động giao thức có thể đã kích hoạt MAIN_EVENT_ERROR. Không thay thế
+    // cảnh báo đó bằng UI/âm thanh "sẵn sàng" — vòng lặp chính có thể xử lý cả hai
+    // sự kiện liên tiếp vì tác vụ kích hoạt có độ ưu tiên thấp hơn.
     const bool has_error = !last_error_message_.empty();
     if (!has_error) {
         auto display = Board::GetInstance().GetDisplay();
@@ -349,38 +349,38 @@ void Application::HandleActivationDoneEvent() {
         display->SetChatMessage("system", "");
     }
 
-    // Release OTA object after activation is complete
+    // Giải phóng đối tượng OTA sau khi kích hoạt hoàn tất
     ota_.reset();
     auto& board = Board::GetInstance();
     board.SetPowerSaveLevel(PowerSaveLevel::LOW_POWER);
 
     if (!has_error) {
         Schedule([this]() {
-            // Play the success sound to indicate the device is ready
+            // Phát âm thanh thành công để báo thiết bị đã sẵn sàng
             audio_service_.PlaySound(Lang::Sounds::OGG_SUCCESS);
         });
     }
 }
 
 void Application::ActivationTask() {
-    // Create OTA object for activation process
+    // Tạo đối tượng OTA cho quá trình kích hoạt
     ota_ = std::make_unique<Ota>();
 
-    // Check for new assets version
+    // Kiểm tra phiên bản assets mới
     CheckAssetsVersion();
 
-    // Check for new firmware version
+    // Kiểm tra phiên bản firmware mới
     CheckNewVersion();
 
-    // Initialize the protocol
+    // Khởi tạo giao thức
     InitializeProtocol();
 
-    // Signal completion to main loop
+    // Báo hoàn tất cho vòng lặp chính
     xEventGroupSetBits(event_group_, MAIN_EVENT_ACTIVATION_DONE);
 }
 
 void Application::CheckAssetsVersion() {
-    // Only allow CheckAssetsVersion to be called once
+    // Chỉ cho phép gọi CheckAssetsVersion một lần
     if (assets_version_checked_) {
         return;
     }
@@ -396,7 +396,7 @@ void Application::CheckAssetsVersion() {
     }
 
     Settings settings("assets", true);
-    // Check if there is a new assets need to be downloaded
+    // Kiểm tra có assets mới cần tải xuống không
     std::string download_url = settings.GetString("download_url");
 
     if (!download_url.empty()) {
@@ -406,7 +406,7 @@ void Application::CheckAssetsVersion() {
         snprintf(message, sizeof(message), Lang::Strings::FOUND_NEW_ASSETS, download_url.c_str());
         Alert(Lang::Strings::LOADING_ASSETS, message, "cloud_download", Lang::Sounds::OGG_UPGRADE);
 
-        // Wait for the audio service to be idle for 3 seconds
+        // Chờ dịch vụ âm thanh rảnh trong 3 giây
         vTaskDelay(pdMS_TO_TICKS(3000));
         SetDeviceState(kDeviceStateUpgrading);
         board.SetPowerSaveLevel(PowerSaveLevel::PERFORMANCE);
@@ -433,7 +433,7 @@ void Application::CheckAssetsVersion() {
         }
     }
 
-    // Apply assets
+    // Áp dụng assets
     assets.Apply();
     display->SetChatMessage("system", "");
     display->SetEmotion("robot_2");
@@ -442,7 +442,7 @@ void Application::CheckAssetsVersion() {
 void Application::CheckNewVersion() {
     const int MAX_RETRY = 10;
     int retry_count = 0;
-    int retry_delay = 10;  // Initial retry delay in seconds
+    int retry_delay = 10;  // Thời gian chờ thử lại ban đầu (giây)
 
     auto& board = Board::GetInstance();
     while (true) {
@@ -484,33 +484,33 @@ void Application::CheckNewVersion() {
                     break;
                 }
             }
-            retry_delay *= 2;  // Double the retry delay
+            retry_delay *= 2;  // Nhân đôi thời gian chờ thử lại
             continue;
         }
         retry_count = 0;
-        retry_delay = 10;  // Reset retry delay
+        retry_delay = 10;  // Đặt lại thời gian chờ thử lại
 
         if (ota_->HasNewVersion()) {
             if (UpgradeFirmware(ota_->GetFirmwareUrl(), ota_->GetFirmwareVersion())) {
-                return;  // This line will never be reached after reboot
+                return;  // Dòng này sẽ không bao giờ chạy tới sau khi khởi động lại
             }
-            // If upgrade failed, continue to normal operation
+            // Nếu nâng cấp thất bại, tiếp tục hoạt động bình thường
         }
 
-        // No new version, mark the current version as valid
+        // Không có phiên bản mới, đánh dấu phiên bản hiện tại là hợp lệ
         ota_->MarkCurrentVersionValid();
         if (!ota_->HasActivationCode() && !ota_->HasActivationChallenge()) {
-            // Exit the loop if done checking new version
+            // Thoát vòng lặp nếu đã kiểm tra xong
             break;
         }
 
         display->SetStatus(Lang::Strings::ACTIVATION);
-        // Activation code is shown to the user and waiting for the user to input
+        // Mã kích hoạt được hiển thị cho người dùng và chờ người dùng nhập
         if (ota_->HasActivationCode()) {
             ShowActivationCode(ota_->GetActivationCode(), ota_->GetActivationMessage());
         }
 
-        // This will block the loop until the activation is done or timeout
+        // Việc này sẽ chặn vòng lặp cho đến khi kích hoạt xong hoặc hết thời gian
         for (int i = 0; i < 10; ++i) {
             ESP_LOGI(TAG, "Activating... %d/%d", i + 1, 10);
             esp_err_t err = ota_->Activate();
@@ -577,7 +577,7 @@ void Application::InitializeProtocol() {
     });
 
     protocol_->OnIncomingJson([this, display](const cJSON* root) {
-        // Parse JSON data
+        // Phân tích dữ liệu JSON
         auto type = cJSON_GetObjectItem(root, "type");
         if (!cJSON_IsString(type)) {
             ESP_LOGW(TAG, "Incoming JSON message has no type");
@@ -684,7 +684,7 @@ void Application::InitializeProtocol() {
             if (cJSON_IsString(command)) {
                 ESP_LOGI(TAG, "System command: %s", command->valuestring);
                 if (strcmp(command->valuestring, "reboot") == 0) {
-                    // Do a reboot if user requests a OTA update
+                    // Khởi động lại nếu người dùng yêu cầu cập nhật OTA
                     Schedule([this]() { Reboot(); });
                 } else {
                     ESP_LOGW(TAG, "Unknown system command: %s", command->valuestring);
@@ -737,7 +737,7 @@ void Application::ShowActivationCode(const std::string& code, const std::string&
          digit_sound{'6', Lang::Sounds::OGG_6}, digit_sound{'7', Lang::Sounds::OGG_7},
          digit_sound{'8', Lang::Sounds::OGG_8}, digit_sound{'9', Lang::Sounds::OGG_9}}};
 
-    // This sentence uses 9KB of SRAM, so we need to wait for it to finish
+    // Câu lệnh này dùng 9KB SRAM nên cần chờ nó chạy xong
     Alert(Lang::Strings::ACTIVATION, message.c_str(), "link", Lang::Sounds::OGG_ACTIVATION);
 
     for (const auto& digit : code) {
@@ -807,7 +807,7 @@ void Application::HandleToggleChatEvent() {
         ListeningMode mode = GetDefaultListeningMode();
         if (!protocol_->IsAudioChannelOpened()) {
             SetDeviceState(kDeviceStateConnecting);
-            // Schedule to let the state change be processed first (UI update)
+            // Lên lịch để xử lý thay đổi trạng thái trước (cập nhật UI)
             Schedule([this, mode]() { ContinueOpenAudioChannel(mode); });
             return;
         }
@@ -820,19 +820,19 @@ void Application::HandleToggleChatEvent() {
 }
 
 void Application::ContinueOpenAudioChannel(ListeningMode mode) {
-    // Check state again in case it was changed during scheduling
+    // Kiểm tra lại trạng thái phòng khi nó bị thay đổi trong lúc lên lịch
     if (GetDeviceState() != kDeviceStateConnecting) {
         return;
     }
 
-    // Switch to performance mode before connecting to reduce latency
+    // Chuyển sang chế độ hiệu năng trước khi kết nối để giảm độ trễ
     auto& board = Board::GetInstance();
     board.SetPowerSaveLevel(PowerSaveLevel::PERFORMANCE);
 
     if (!protocol_->IsAudioChannelOpened()) {
         if (!protocol_->OpenAudioChannel()) {
-            // Return to idle so the device is not stuck in the connecting
-            // state (not every failure path reports a network error)
+            // Quay về trạng thái rảnh để thiết bị không bị kẹt ở trạng thái
+            // kết nối (không phải đường lỗi nào cũng báo lỗi mạng)
             SetDeviceState(kDeviceStateIdle);
             return;
         }
@@ -866,7 +866,7 @@ void Application::HandleStartListeningEvent() {
     if (state == kDeviceStateIdle) {
         if (!protocol_->IsAudioChannelOpened()) {
             SetDeviceState(kDeviceStateConnecting);
-            // Schedule to let the state change be processed first (UI update)
+            // Lên lịch để xử lý thay đổi trạng thái trước (cập nhật UI)
             Schedule([this]() { ContinueOpenAudioChannel(kListeningModeManualStop); });
             return;
         }
@@ -910,7 +910,7 @@ void Application::HandleWakeWordDetectedEvent() {
         BeginWakeWordInvoke(wake_word);
     } else if (state == kDeviceStateSpeaking || state == kDeviceStateListening) {
         AbortSpeaking(kAbortReasonWakeWordDetected);
-        // Clear send queue to avoid sending residues to server
+        // Xóa hàng đợi gửi để tránh gửi dữ liệu thừa lên máy chủ
         while (audio_service_.PopPacketFromSendQueue())
             ;
 
@@ -918,58 +918,58 @@ void Application::HandleWakeWordDetectedEvent() {
             protocol_->SendStartListening(GetDefaultListeningMode());
             audio_service_.ResetDecoder();
             audio_service_.PlaySound(Lang::Sounds::OGG_POPUP);
-            // Re-enable wake word detection as it was stopped by the detection itself
+            // Bật lại phát hiện từ đánh thức vì chính việc phát hiện đã dừng nó
             audio_service_.EnableWakeWordDetection(true);
         } else {
-            // Play popup sound and start listening again
+            // Phát âm thanh popup và bắt đầu lắng nghe lại
             play_popup_on_listening_ = true;
             SetListeningMode(GetDefaultListeningMode());
         }
     } else if (state == kDeviceStateActivating) {
-        // Restart the activation check if the wake word is detected during activation
+        // Khởi động lại việc kiểm tra kích hoạt nếu phát hiện từ đánh thức trong lúc kích hoạt
         SetDeviceState(kDeviceStateIdle);
     }
 }
 
 void Application::BeginWakeWordInvoke(const std::string& wake_word) {
-    // Must run in the main task with the device in idle state
+    // Phải chạy trong tác vụ chính khi thiết bị ở trạng thái rảnh
     audio_service_.EncodeWakeWord();
 
-    // Always pass through the connecting state, even if the audio channel is
-    // already opened. ContinueWakeWordInvoke() rejects any other state, so
-    // skipping this transition would silently drop the wake word invocation.
+    // Luôn đi qua trạng thái kết nối, kể cả khi kênh âm thanh
+    // đã mở. ContinueWakeWordInvoke() từ chối mọi trạng thái khác, nên
+    // bỏ qua bước chuyển này sẽ âm thầm làm mất lần gọi từ đánh thức.
     if (!SetDeviceState(kDeviceStateConnecting)) {
-        // Wake word detection was stopped by the detection itself; restore it
-        // so the device does not become unresponsive to wake words.
+        // Phát hiện từ đánh thức đã bị dừng bởi chính việc phát hiện; khôi phục nó
+        // để thiết bị không ngừng phản hồi với từ đánh thức.
         audio_service_.EnableWakeWordDetection(true);
         return;
     }
 
     if (!protocol_->IsAudioChannelOpened()) {
-        // Schedule to let the state change be processed first (UI update),
-        // then continue with OpenAudioChannel which may block for ~1 second
+        // Lên lịch để xử lý thay đổi trạng thái trước (cập nhật UI),
+        // rồi tiếp tục với OpenAudioChannel, có thể chặn khoảng 1 giây
         Schedule([this, wake_word]() { ContinueWakeWordInvoke(wake_word); });
         return;
     }
-    // Channel already opened, continue directly
+    // Kênh đã mở, tiếp tục trực tiếp
     ContinueWakeWordInvoke(wake_word);
 }
 
 void Application::ContinueWakeWordInvoke(const std::string& wake_word) {
-    // Check state again in case it was changed during scheduling
+    // Kiểm tra lại trạng thái phòng khi nó bị thay đổi trong lúc lên lịch
     if (GetDeviceState() != kDeviceStateConnecting) {
         return;
     }
 
-    // Switch to performance mode before connecting to reduce latency
+    // Chuyển sang chế độ hiệu năng trước khi kết nối để giảm độ trễ
     auto& board = Board::GetInstance();
     board.SetPowerSaveLevel(PowerSaveLevel::PERFORMANCE);
 
     if (!protocol_->IsAudioChannelOpened()) {
         if (!protocol_->OpenAudioChannel()) {
-            // Return to idle so the device is not stuck in the connecting
-            // state (not every failure path reports a network error), and
-            // wake word detection is re-enabled by the idle state handler.
+            // Quay về trạng thái rảnh để thiết bị không bị kẹt ở trạng thái
+            // kết nối (không phải đường lỗi nào cũng báo lỗi mạng), và
+            // phát hiện từ đánh thức được bật lại bởi bộ xử lý trạng thái rảnh.
             SetDeviceState(kDeviceStateIdle);
             return;
         }
@@ -977,16 +977,16 @@ void Application::ContinueWakeWordInvoke(const std::string& wake_word) {
 
     ESP_LOGI(TAG, "Wake word detected: %s", wake_word.c_str());
 #if CONFIG_SEND_WAKE_WORD_DATA
-    // Encode and send the wake word data to the server
+    // Mã hóa và gửi dữ liệu từ đánh thức lên máy chủ
     while (auto packet = audio_service_.PopWakeWordPacket()) {
         protocol_->SendAudio(std::move(packet));
     }
-    // Set the chat state to wake word detected
+    // Đặt trạng thái trò chuyện thành đã phát hiện từ đánh thức
     protocol_->SendWakeWordDetected(wake_word);
     SetListeningMode(GetDefaultListeningMode());
 #else
-    // Set flag to play popup sound after state changes to listening
-    // (PlaySound here would be cleared by ResetDecoder in EnableVoiceProcessing)
+    // Đặt cờ phát âm thanh popup sau khi trạng thái thay đổi
+    // (PlaySound ở đây sẽ bị xóa bởi ResetDecoder trong EnableVoiceProcessing)
     play_popup_on_listening_ = true;
     SetListeningMode(GetDefaultListeningMode());
 #endif
@@ -995,8 +995,8 @@ void Application::ContinueWakeWordInvoke(const std::string& wake_word) {
 void Application::HandleStateChangedEvent() {
     DeviceState new_state = state_machine_.GetState();
     clock_ticks_ = 0;
-    // Any state change invalidates a pending deferred listening start;
-    // the Listening case below re-arms it when needed.
+    // Mọi thay đổi trạng thái làm vô hiệu việc bắt đầu lắng nghe trì hoãn đang chờ;
+    // nhánh Listening bên dưới sẽ đặt lại khi cần.
     pending_listening_start_ = false;
 
     auto& board = Board::GetInstance();
@@ -1007,14 +1007,14 @@ void Application::HandleStateChangedEvent() {
     switch (new_state) {
         case kDeviceStateUnknown:
         case kDeviceStateIdle:
-            // Keep a just-raised network error visible. SetDeviceState(idle)
-            // queues STATE_CHANGED after Alert(), and the idle handler would
-            // otherwise wipe the status, emotion, and chat message.
+            // Giữ lỗi mạng vừa phát sinh luôn hiển thị. SetDeviceState(idle)
+            // đưa STATE_CHANGED vào hàng đợi sau Alert(), và bộ xử lý trạng thái rảnh
+            // nếu không sẽ xóa mất trạng thái, biểu cảm và thông điệp trò chuyện.
             if (last_error_message_.empty()) {
                 display->SetStatus(Lang::Strings::STANDBY);
-                display->ClearChatMessages();  // Clear messages first
+                display->ClearChatMessages();  // Xóa các thông điệp trước
                 display->SetEmotion(
-                    "neutral");  // Then set emotion (wechat mode checks child count)
+                    "neutral");  // Rồi đặt biểu cảm (chế độ wechat kiểm tra số phần tử con)
             }
             audio_service_.EnableVoiceProcessing(false);
             audio_service_.EnableWakeWordDetection(true);
@@ -1028,12 +1028,12 @@ void Application::HandleStateChangedEvent() {
             display->SetStatus(Lang::Strings::LISTENING);
             display->SetEmotion("neutral");
 
-            // Make sure the audio processor is running
+            // Đảm bảo bộ xử lý âm thanh đang chạy
             if (play_popup_on_listening_ || !audio_service_.IsAudioProcessorRunning()) {
-                // For auto mode, wait for the playback queue to drain before enabling
-                // voice processing. This prevents audio truncation when STOP arrives
-                // late due to network jitter. Instead of blocking the main loop here,
-                // defer the start until MAIN_EVENT_PLAYBACK_DRAINED arrives.
+                // Với chế độ tự động, chờ hàng đợi phát lại phát hết rồi mới bật
+                // xử lý giọng nói. Điều này tránh cắt cụt âm thanh khi STOP đến
+                // muộn do jitter mạng. Thay vì chặn vòng lặp chính ở đây,
+                // hoãn việc bắt đầu cho đến khi MAIN_EVENT_PLAYBACK_DRAINED đến.
                 if (listening_mode_ == kListeningModeAutoStop && !audio_service_.IsPlaybackIdle()) {
                     pending_listening_start_ = true;
                 } else {
@@ -1048,7 +1048,7 @@ void Application::HandleStateChangedEvent() {
 
             if (listening_mode_ != kListeningModeRealtime) {
                 audio_service_.EnableVoiceProcessing(false);
-                // Only AFE wake word can be detected in speaking mode
+                // Chỉ phát hiện được từ đánh thức AFE ở chế độ nói
                 audio_service_.EnableWakeWordDetection(audio_service_.IsAfeWakeWord());
             }
             audio_service_.ResetDecoder();
@@ -1063,25 +1063,25 @@ void Application::HandleStateChangedEvent() {
             audio_service_.EnableWakeWordDetection(false);
             break;
         default:
-            // Do nothing
+            // Không làm gì
             break;
     }
 }
 
 void Application::StartListeningAudio() {
-    // Runs in the main loop, either directly from HandleStateChangedEvent or
-    // deferred via MAIN_EVENT_PLAYBACK_DRAINED once the playback queue drains.
+    // Chạy trong vòng lặp chính, trực tiếp từ HandleStateChangedEvent hoặc
+    // trì hoãn qua MAIN_EVENT_PLAYBACK_DRAINED khi hàng đợi phát lại đã phát hết.
     if (GetDeviceState() != kDeviceStateListening) {
         return;
     }
 
-    // Send the start listening command
+    // Gửi lệnh bắt đầu lắng nghe
     protocol_->SendStartListening(listening_mode_);
     audio_service_.EnableVoiceProcessing(true);
 
     ConfigureWakeWordForListening();
 
-    // Play popup sound after ResetDecoder (in EnableVoiceProcessing) has been called
+    // Phát âm thanh popup sau khi ResetDecoder (trong EnableVoiceProcessing) đã được gọi
     if (play_popup_on_listening_) {
         play_popup_on_listening_ = false;
         audio_service_.PlaySound(Lang::Sounds::OGG_POPUP);
@@ -1090,10 +1090,10 @@ void Application::StartListeningAudio() {
 
 void Application::ConfigureWakeWordForListening() {
 #ifdef CONFIG_WAKE_WORD_DETECTION_IN_LISTENING
-    // Enable wake word detection in listening mode (configured via Kconfig)
+    // Bật phát hiện từ đánh thức ở chế độ lắng nghe (cấu hình qua Kconfig)
     audio_service_.EnableWakeWordDetection(audio_service_.IsAfeWakeWord());
 #else
-    // Disable wake word detection in listening mode
+    // Tắt phát hiện từ đánh thức ở chế độ lắng nghe
     audio_service_.EnableWakeWordDetection(false);
 #endif
 }
@@ -1110,7 +1110,7 @@ void Application::StartNotification(std::string audio_url, std::vector<NotifySub
     audio_service_.EnableWakeWordDetection(audio_service_.IsAfeWakeWord());
     audio_service_.ReleaseWakeWordResources();
     while (audio_service_.PopPacketFromSendQueue()) {
-        // Discard microphone audio left over from a previous conversation.
+        // Loại bỏ âm thanh micro còn sót lại từ cuộc hội thoại trước.
     }
 
     if (!SetDeviceState(kDeviceStateNotifying)) {
@@ -1194,7 +1194,7 @@ void Application::Reboot() {
     if (GetDeviceState() == kDeviceStateNotifying) {
         StopNotification();
     }
-    // Disconnect the audio channel
+    // Ngắt kênh âm thanh
     if (protocol_ && protocol_->IsAudioChannelOpened()) {
         protocol_->CloseAudioChannel();
     }
@@ -1216,7 +1216,7 @@ bool Application::UpgradeFirmware(const std::string& url, const std::string& ver
         StopNotification();
     }
 
-    // Close audio channel if it's open
+    // Đóng kênh âm thanh nếu đang mở
     if (protocol_ && protocol_->IsAudioChannelOpened()) {
         ESP_LOGI(TAG, "Closing audio channel before firmware upgrade");
         protocol_->CloseAudioChannel();
@@ -1245,20 +1245,20 @@ bool Application::UpgradeFirmware(const std::string& url, const std::string& ver
     });
 
     if (!upgrade_success) {
-        // Upgrade failed, restart audio service and continue running
+        // Nâng cấp thất bại, khởi động lại dịch vụ âm thanh và tiếp tục chạy
         ESP_LOGE(TAG,
                  "Firmware upgrade failed, restarting audio service and continuing operation...");
-        audio_service_.Start();                              // Restart audio service
-        board.SetPowerSaveLevel(PowerSaveLevel::LOW_POWER);  // Restore power save level
+        audio_service_.Start();                              // Khởi động lại dịch vụ âm thanh
+        board.SetPowerSaveLevel(PowerSaveLevel::LOW_POWER);  // Khôi phục mức tiết kiệm điện
         Alert(Lang::Strings::ERROR, Lang::Strings::UPGRADE_FAILED, "cancel",
               Lang::Sounds::OGG_EXCLAMATION);
         vTaskDelay(pdMS_TO_TICKS(3000));
         return false;
     } else {
-        // Upgrade success, reboot immediately
+        // Nâng cấp thành công, khởi động lại ngay
         ESP_LOGI(TAG, "Firmware upgrade successful, rebooting...");
         display->SetChatMessage("system", "Upgrade successful, rebooting...");
-        vTaskDelay(pdMS_TO_TICKS(1000));  // Brief pause to show message
+        vTaskDelay(pdMS_TO_TICKS(1000));  // Tạm dừng ngắn để hiển thị thông điệp
         Reboot();
         return true;
     }
@@ -1272,8 +1272,8 @@ void Application::WakeWordInvoke(const std::string& wake_word) {
     auto state = GetDeviceState();
 
     if (state == kDeviceStateIdle) {
-        // May be called from outside the main task (e.g. board button
-        // callbacks), so schedule the invocation instead of running it here
+        // Có thể được gọi từ ngoài tác vụ chính (ví dụ callback nút bấm của board),
+        // nên lên lịch việc gọi thay vì chạy trực tiếp tại đây
         Schedule([this, wake_word]() {
             if (GetDeviceState() == kDeviceStateIdle) {
                 BeginWakeWordInvoke(wake_word);
@@ -1310,7 +1310,7 @@ bool Application::CanEnterSleepMode() {
         return false;
     }
 
-    // Now it is safe to enter sleep mode
+    // Giờ đã an toàn để vào chế độ ngủ
     return true;
 }
 
@@ -1319,7 +1319,7 @@ void Application::RegisterMcpBroadcastCallback(std::function<void(const std::str
 }
 
 void Application::SendMcpMessage(const std::string& payload) {
-    // Always schedule to run in main task for thread safety
+    // Luôn lên lịch chạy trong tác vụ chính để an toàn luồng
     Schedule([this, payload]() {
         if (protocol_) {
             protocol_->SendMcpMessage(payload);
@@ -1350,7 +1350,7 @@ void Application::SetAecMode(AecMode mode) {
                 break;
         }
 
-        // If the AEC mode is changed, close the audio channel
+        // Nếu chế độ AEC thay đổi, đóng kênh âm thanh
         if (protocol_ && protocol_->IsAudioChannelOpened()) {
             protocol_->CloseAudioChannel();
         }
@@ -1364,11 +1364,11 @@ void Application::ResetProtocol() {
         if (GetDeviceState() == kDeviceStateNotifying) {
             StopNotification();
         }
-        // Close audio channel if opened
+        // Đóng kênh âm thanh nếu đang mở
         if (protocol_ && protocol_->IsAudioChannelOpened()) {
             protocol_->CloseAudioChannel();
         }
-        // Reset protocol
+        // Đặt lại giao thức
         protocol_.reset();
     });
 }

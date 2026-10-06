@@ -21,7 +21,7 @@
 #include "device_state_machine.h"
 #include "notify/notify_player.h"
 
-// Main event bits
+// Các bit sự kiện chính
 #define MAIN_EVENT_SCHEDULE             (1 << 0)
 #define MAIN_EVENT_SEND_AUDIO           (1 << 1)
 #define MAIN_EVENT_WAKE_WORD_DETECTED   (1 << 2)
@@ -50,21 +50,21 @@ public:
         static Application instance;
         return instance;
     }
-    // Delete copy constructor and assignment operator
+    // Xóa hàm khởi tạo sao chép và toán tử gán
     Application(const Application&) = delete;
     Application& operator=(const Application&) = delete;
 
     /**
-     * Initialize the application
-     * This sets up display, audio, network callbacks, etc.
-     * Network connection starts asynchronously.
+     * Khởi tạo ứng dụng
+     * Thiết lập màn hình, âm thanh, các callback mạng, v.v.
+     * Kết nối mạng được bắt đầu một cách bất đồng bộ.
      */
     void Initialize();
 
     /**
-     * Run the main event loop
-     * This function runs in the main task and never returns.
-     * It handles all events including network, state changes, and user interactions.
+     * Chạy vòng lặp sự kiện chính
+     * Hàm này chạy trong tác vụ chính và không bao giờ trả về.
+     * Xử lý mọi sự kiện, gồm mạng, thay đổi trạng thái và tương tác của người dùng.
      */
     void Run();
 
@@ -72,18 +72,18 @@ public:
     bool IsVoiceDetected() const { return audio_service_.IsVoiceDetected(); }
     
     /**
-     * Request state transition
-     * Returns true if transition was successful
+     * Yêu cầu chuyển trạng thái
+     * Trả về true nếu chuyển trạng thái thành công
      */
     bool SetDeviceState(DeviceState state);
 
     /**
-     * Schedule a callback to be executed in the main task
+     * Lên lịch một callback để thực thi trong tác vụ chính
      */
     void Schedule(std::function<void()>&& callback);
 
     /**
-     * Alert with status, message, emotion and optional sound
+     * Cảnh báo kèm trạng thái, thông điệp, biểu cảm và âm thanh tùy chọn
      */
     void Alert(const char* status, const char* message, const char* emotion = "", const std::string_view& sound = "");
     void DismissAlert();
@@ -91,20 +91,20 @@ public:
     void AbortSpeaking(AbortReason reason);
 
     /**
-     * Toggle chat state (event-based, thread-safe)
-     * Sends MAIN_EVENT_TOGGLE_CHAT to be handled in Run()
+     * Chuyển đổi trạng thái trò chuyện (dựa trên sự kiện, an toàn luồng)
+     * Gửi MAIN_EVENT_TOGGLE_CHAT để được xử lý trong Run()
      */
     void ToggleChatState();
 
     /**
-     * Start listening (event-based, thread-safe)
-     * Sends MAIN_EVENT_START_LISTENING to be handled in Run()
+     * Bắt đầu lắng nghe (dựa trên sự kiện, an toàn luồng)
+     * Gửi MAIN_EVENT_START_LISTENING để được xử lý trong Run()
      */
     void StartListening();
 
     /**
-     * Stop listening (event-based, thread-safe)
-     * Sends MAIN_EVENT_STOP_LISTENING to be handled in Run()
+     * Dừng lắng nghe (dựa trên sự kiện, an toàn luồng)
+     * Gửi MAIN_EVENT_STOP_LISTENING để được xử lý trong Run()
      */
     void StopListening();
 
@@ -120,9 +120,9 @@ public:
     AudioService& GetAudioService() { return audio_service_; }
     
     /**
-     * Reset protocol resources (thread-safe)
-     * Can be called from any task to release resources allocated after network connected
-     * This includes closing audio channel, resetting protocol and ota objects
+     * Đặt lại tài nguyên giao thức (an toàn luồng)
+     * Có thể gọi từ bất kỳ tác vụ nào để giải phóng tài nguyên được cấp phát sau khi mạng kết nối
+     * Bao gồm đóng kênh âm thanh, đặt lại giao thức và các đối tượng ota
      */
     void ResetProtocol();
 
@@ -149,13 +149,13 @@ private:
     bool has_server_time_ = false;
     bool aborted_ = false;
     bool assets_version_checked_ = false;
-    bool play_popup_on_listening_ = false;  // Flag to play popup sound after state changes to listening
-    bool pending_listening_start_ = false;  // Waiting for playback to drain before starting listening (auto mode)
+    bool play_popup_on_listening_ = false;  // Cờ phát âm thanh popup sau khi trạng thái chuyển sang lắng nghe
+    bool pending_listening_start_ = false;  // Đang chờ phát hết hàng đợi phát lại trước khi bắt đầu lắng nghe (chế độ tự động)
     int clock_ticks_ = 0;
     TaskHandle_t activation_task_handle_ = nullptr;
 
 
-    // Event handlers
+    // Các bộ xử lý sự kiện
     void HandleStateChangedEvent();
     void HandleToggleChatEvent();
     void HandleStartListeningEvent();
@@ -173,10 +173,10 @@ private:
     void StopNotification();
     void HandleNotificationFinished(uint32_t playback_id, bool success);
 
-    // Activation task (runs in background)
+    // Tác vụ kích hoạt (chạy nền)
     void ActivationTask();
 
-    // Helper methods
+    // Các phương thức hỗ trợ
     void CheckAssetsVersion();
     void CheckNewVersion();
     void InitializeProtocol();
@@ -184,7 +184,7 @@ private:
     void SetListeningMode(ListeningMode mode);
     ListeningMode GetDefaultListeningMode() const;
     
-    // State change handler called by state machine
+    // Bộ xử lý thay đổi trạng thái được máy trạng thái gọi
     void OnStateChanged(DeviceState old_state, DeviceState new_state);
 };
 

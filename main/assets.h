@@ -92,7 +92,7 @@ private:
                           size_t& size) override;
     };
 
-    // Strategy instance
+    // Thể hiện của chiến lược
     std::unique_ptr<AssetStrategy> strategy_;
 
 protected:
